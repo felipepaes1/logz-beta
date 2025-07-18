@@ -1,0 +1,7 @@
+export enum TenancyTypeEnum {
+    MAIN = 'MAIN',
+    GENERAL = 'GENERAL',
+    DOCUMENT = 'DOCUMENT',
+    SHARED_RECORD = 'SHARED_RECORD',
+    BUSINESS_SUBGROUP = 'BUSINESS_SUBGROUP'
+}

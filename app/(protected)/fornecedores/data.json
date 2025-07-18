@@ -1,0 +1,29 @@
+[
+  {
+    "id": 1,
+    "empresa": "ACME Ltda",
+    "vendedor": "João Silva",
+    "email": "joao@acme.com",
+    "telefone": "(11) 99999-1111",
+    "prazo": 30,
+    "observacoes": "Entrega em até 30 dias"
+  },
+  {
+    "id": 2,
+    "empresa": "Beta Corp",
+    "vendedor": "Maria Souza",
+    "email": "maria@beta.com",
+    "telefone": "(21) 98888-2222",
+    "prazo": 45,
+    "observacoes": "Pagamento antecipado"
+  },
+  {
+    "id": 3,
+    "empresa": "Gamma S.A.",
+    "vendedor": "Carlos Lima",
+    "email": "carlos@gamma.com",
+    "telefone": "(31) 97777-3333",
+    "prazo": 60,
+    "observacoes": "Prazo longo"
+  }
+]
