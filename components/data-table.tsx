@@ -86,6 +86,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table,
   TableBody,
@@ -242,6 +243,7 @@ export function DataTable<T extends { id: number }>({
   renderAddForm,
   headerActions,
   onDataChange,
+  isLoading = false,
 }: {
   data: T[]
   columns: ColumnDef<T>[]
@@ -249,6 +251,7 @@ export function DataTable<T extends { id: number }>({
   renderAddForm?: React.ReactNode
   headerActions?: React.ReactNode
   onDataChange?: (rows: T[]) => void
+  isLoading?: boolean
 }) {
   const [rows, setRows] = React.useState(() => data)
 
@@ -394,8 +397,18 @@ export function DataTable<T extends { id: number }>({
                   </TableRow>
                 ))}
               </TableHeader>
-              <TableBody className="**:data-[slot=table-cell]:first:w-8">
-                {table.getRowModel().rows?.length ? (
+                <TableBody className="**:data-[slot=table-cell]:first:w-8">
+                {isLoading ? (
+                  Array.from({ length: 10 }).map((_, i) => (
+                    <TableRow key={`sk-${i}`}>
+                      {columns.map((_, j) => (
+                        <TableCell key={`sk-cell-${j}`}>
+                          <Skeleton className="h-4 w-full" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : table.getRowModel().rows.length ? (
                   <SortableContext
                     items={dataIds}
                     strategy={verticalListSortingStrategy}
@@ -406,10 +419,7 @@ export function DataTable<T extends { id: number }>({
                   </SortableContext>
                 ) : (
                   <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center"
-                    >
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
                       No results.
                     </TableCell>
                   </TableRow>

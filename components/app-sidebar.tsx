@@ -23,8 +23,6 @@ import {
 } from "@/components/ui/sidebar"
 
 import Image from "next/image"
-
-import logo from "@/assets/logo-logz.svg"
 import logoDark from "@/assets/logo-logz-dark.svg"
 import logoLight from "@/assets/logo-logz-light.svg"
 
@@ -34,13 +32,18 @@ export const sidebarData = {
   user: {
     name: "felipe.paes",
     email: "felippe@logztech.com.br",
-    avatar: "/avatars/shadcn.jpg",
+    avatar: "",
   },
   navMain: [
     {
       title: "Dashboard",
       url: "/dashboard",
       icon: IconDashboard,
+      items: [
+        { title: "Análise por Ferramentas",  url: "/dashboard/analise-por-ferramenta" },
+        { title: "Análise por Operadores",         url: "/dashboard/analise-por-operador" },
+        { title: "Análise por Centros de Custo",     url: "/dashboard/analise-por-centro-de-custo" },
+      ],
     },
     {
       title: "Colaboradores",

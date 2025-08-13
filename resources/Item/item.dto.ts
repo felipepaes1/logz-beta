@@ -9,7 +9,7 @@ export class ItemDto extends BaseDTO {
     public active = true;
     public id?: string;
     public name: string;
-    public description: string;
+    public description?: string;
     public code: string;
     public quantity: number;
     public min_quantity: number;
@@ -17,15 +17,20 @@ export class ItemDto extends BaseDTO {
     public avatar_id: string;
     public avatar: any;
 
-    public manufacturerResource: ManufacturerResource;
+    public manufacturerResource?: ManufacturerResource;
     public manufacturerDto: ManufacturerDto;
 
-    public itemGroupResource: ItemGroupResource;
+    public itemGroupResource?: ItemGroupResource;
     public itemGroupDto: ItemGroupDto;
 
     public itemResource: ItemResource;
 
     public createFromColoquentResource(resource: ItemResource): ItemDto {
+
+        if (!resource || typeof resource.getApiId !== "function") {
+            return this
+        }
+        
         this.id = resource?.getApiId();
         this.name = resource?.getAttribute('name');
         this.active = !!resource?.getAttribute('active');

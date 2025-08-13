@@ -9,6 +9,11 @@ export class PcpDto extends BaseDTO {
     public pcpResource: PcpResource;
 
     public createFromColoquentResource(resource: PcpResource): PcpDto {
+
+        if (!resource || typeof resource.getApiId !== "function") {
+            return this
+        }
+        
         this.pcpResource = resource;
 
         this.id = resource?.getApiId();

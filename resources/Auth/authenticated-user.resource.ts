@@ -78,8 +78,10 @@ export class AuthenticatedUser {
         localStorage.setItem('@tenancy_id', String(tempUserResource.getAttribute('tenant_id')) ?? '');
         localStorage.setItem('@tenancy_name', 'Nome empresa');
         localStorage.setItem('@user_response', JSON.stringify(formattedResponse));
-        localStorage.setItem("@token", tempUserResource.getAttribute('token'));
-        document.cookie = `token=${tempUserResource.getAttribute('token')}; path=/`;
+        const token = String(tempUserResource.getAttribute('token') ?? '');
+        localStorage.setItem("@token", token);
+        const secure = typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+        document.cookie = `token=${token}; Path=/; Max-Age=2592000; SameSite=Lax${secure}`;
     }
 
     public static loadUserResource(): Promise<UserResource> {

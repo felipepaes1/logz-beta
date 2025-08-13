@@ -23,9 +23,10 @@ import { ItemResource } from "@/resources/Item/item.resource"
 import { ManufacturerResource } from "@/resources/Manufacturer/manufacturer.resource"
 import { ItemGroupResource } from "@/resources/ItemGroup/item-group.resource"
 import { ItemDto } from "@/resources/Item/item.dto"
+import { cn } from "@/lib/utils"
 
 interface FerramentaFormProps {
-  onSubmit: (dto: ItemDto) => void
+  onSubmit: (dto: ItemDto) => Promise<unknown>
   resource?: ItemResource
   manufacturers: ManufacturerResource[]
   itemGroups: ItemGroupResource[]
@@ -42,135 +43,197 @@ export function FerramentaForm({
   const [active, setActive] = React.useState(
     resource?.getAttribute("active") ?? true
   )
-  const manufacturerRelation = resource?.getRelation("manufacturer") as
-    | ManufacturerResource
-    | undefined
-  const itemGroupRelation = resource?.getRelation("itemGroup") as
-    | ItemGroupResource
-    | undefined
-  const [manufacturer, setManufacturer] = React.useState(
-    manufacturerRelation?.getApiId() ? String(manufacturerRelation.getApiId()) : ""
+  const [manufacturerId, setManufacturerId] = React.useState(
+    resource?.getRelation("manufacturer")?.getApiId()?.toString() ?? ""
   )
-  const [itemGroup, setItemGroup] = React.useState(
-    itemGroupRelation?.getApiId() ? String(itemGroupRelation.getApiId()) : ""
+  const [itemGroupId, setItemGroupId] = React.useState(
+    resource?.getRelation("itemGroup")?.getApiId()?.toString() ?? ""
   )
+  const [submitting, setSubmitting] = React.useState(false)
+  const [errors, setErrors] = React.useState<{
+    nome?: string
+    codigo?: string
+    itemGroup?: string
+    manufacturer?: string
+  }>({})
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const form = e.currentTarget
+    const data = new FormData(form)
+
+    const nome = data.get("nome")?.toString().trim() || ""
+    const codigo = data.get("codigo")?.toString().trim() || ""
+    const manufacturerRsc = manufacturers.find(
+      (m) => m.getApiId()?.toString() === manufacturerId
+    )
+    const itemGroupRsc = itemGroups.find(
+      (g) => g.getApiId()?.toString() === itemGroupId
+    )
+
+    const newErrors: typeof errors = {}
+    if (!nome) newErrors.nome = "Campo obrigatório"
+    if (!codigo) newErrors.codigo = "Campo obrigatório"
+    if (!itemGroupId) newErrors.itemGroup = "Campo obrigatório"
+    if (!manufacturerId) newErrors.manufacturer = "Campo obrigatório"
+
+    if (Object.keys(newErrors).length) {
+      setErrors(newErrors)
+      return
+    }
+    setErrors({})
+
+    const dto = new ItemDto()
+    if (resource) dto.createFromColoquentResource(resource)
+    dto.name = nome
+    dto.code = codigo
+    dto.active = active
+    dto.description = nome
+    dto.min_quantity = Number(data.get("estoqueMinimo") || 0)
+    dto.quantity = 0
+    dto.manufacturerResource = manufacturerRsc
+    dto.itemGroupResource = itemGroupRsc
+
+    try {
+      setSubmitting(true)
+      await onSubmit(dto)
+      form.reset()
+      setActive(true)
+      form
+        .closest("[data-state=open]")
+        ?.querySelector("button[data-close]")?.click()
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <DrawerContent>
       <DrawerHeader>
         <DrawerTitle>{title}</DrawerTitle>
       </DrawerHeader>
+
       <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            const form = e.currentTarget
-            const data = new FormData(form)
-            const manufacturerResource = manufacturers.find(
-              (m) => String(m.getApiId()) === manufacturer
-            )
-            const itemGroupResource = itemGroups.find(
-              (g) => String(g.getApiId()) === itemGroup
-            )
-            const dto = new ItemDto()
-            dto.createFromColoquentResource(resource ?? new ItemResource())
-            dto.name = String(data.get("nome") || "")
-            dto.description = String(data.get("descricao") || "")
-            dto.code = String(data.get("codigo") || "")
-            dto.min_quantity = Number(data.get("estoqueMinimo") || 0)
-            dto.quantity = Number(data.get("estoqueAtual") || 0)
-            dto.active = active
-            if (manufacturerResource) {
-              dto.manufacturerResource = manufacturerResource
-            }
-            if (itemGroupResource) {
-              dto.itemGroupResource = itemGroupResource
-            }
-            onSubmit(dto)
-            form.reset()
-          }}
-        >
-          <div className="flex flex-col gap-3">
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          {/* Nome */}
+          <div className="flex flex-col gap-1">
             <Label htmlFor="nome">Nome</Label>
-            <Input id="nome" name="nome" defaultValue={resource?.getAttribute("name")} />
+            <Input
+              id="nome"
+              name="nome"
+              defaultValue={resource?.getAttribute("name")}
+              className={cn(errors.nome && "border-destructive")}
+            />
+            {errors.nome && (
+              <span className="text-destructive text-xs">{errors.nome}</span>
+            )}
           </div>
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="descricao">Descrição</Label>
-            <Input id="descricao" name="descricao" defaultValue={resource?.getAttribute("description")} />
-          </div>
-          <div className="flex flex-col gap-3">
+
+          {/* Código */}
+          <div className="flex flex-col gap-1">
             <Label htmlFor="codigo">Código</Label>
-            <Input id="codigo" name="codigo" defaultValue={resource?.getAttribute("code")} />
+            <Input
+              id="codigo"
+              name="codigo"
+              defaultValue={resource?.getAttribute("code")}
+              className={cn(errors.codigo && "border-destructive")}
+            />
+            {errors.codigo && (
+              <span className="text-destructive text-xs">{errors.codigo}</span>
+            )}
           </div>
+
+          {/* Grupo */}
           <div className="flex flex-col gap-3">
-            <Label htmlFor="grupo">Grupo</Label>
-            <Select value={itemGroup} onValueChange={setItemGroup}>
-              <SelectTrigger id="grupo" className="w-full">
+            <Label>Grupo</Label>
+            <Select value={itemGroupId} onValueChange={setItemGroupId}>
+              <SelectTrigger
+                className={cn(errors.itemGroup && "border-destructive")}
+              >
                 <SelectValue placeholder="Selecione um grupo" />
               </SelectTrigger>
               <SelectContent>
                 {itemGroups.map((g) => (
-                  <SelectItem key={String(g.getApiId())} value={String(g.getApiId())}>
+                  <SelectItem
+                    key={g.getApiId()}
+                    value={g.getApiId()?.toString() || ""}
+                  >
                     {g.getAttribute("description")}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.itemGroup && (
+              <span className="text-destructive text-xs">
+                {errors.itemGroup}
+              </span>
+            )}
           </div>
+
+          {/* Fabricante */}
           <div className="flex flex-col gap-3">
-            <Label htmlFor="fabricante">Fabricante</Label>
-            <Select value={manufacturer} onValueChange={setManufacturer}>
-              <SelectTrigger id="fabricante" className="w-full">
+            <Label>Fabricante</Label>
+            <Select value={manufacturerId} onValueChange={setManufacturerId}>
+              <SelectTrigger
+                className={cn(errors.manufacturer && "border-destructive")}
+              >
                 <SelectValue placeholder="Selecione um fabricante" />
               </SelectTrigger>
               <SelectContent>
                 {manufacturers.map((m) => (
-                  <SelectItem key={String(m.getApiId())} value={String(m.getApiId())}>
+                  <SelectItem
+                    key={m.getApiId()}
+                    value={m.getApiId()?.toString() || ""}
+                  >
                     {m.getAttribute("description")}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.manufacturer && (
+              <span className="text-destructive text-xs">
+                {errors.manufacturer}
+              </span>
+            )}
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="estoqueMinimo">Estoque Mínimo</Label>
-              <Input
-                id="estoqueMinimo"
-                name="estoqueMinimo"
-                type="number"
-                defaultValue={
-                  resource?.getAttribute("min_quantity") !== undefined
-                    ? String(resource.getAttribute("min_quantity"))
-                    : undefined
-                }
-              />
-            </div>
-            <div className="flex flex-col gap-3">
-              <Label htmlFor="estoqueAtual">Estoque Atual</Label>
-              <Input
-                id="estoqueAtual"
-                name="estoqueAtual"
-                type="number"
-                defaultValue={
-                  resource?.getAttribute("quantity") !== undefined
-                    ? String(resource.getAttribute("quantity"))
-                    : undefined
-                }
-              />
-            </div>
+
+          {/* Estoques */}
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="estoqueMinimo">Estoque Mínimo</Label>
+            <Input
+              id="estoqueMinimo"
+              name="estoqueMinimo"
+              type="number"
+              defaultValue={
+                resource?.getAttribute("min_quantity")?.toString() ?? ""
+              }
+            />
           </div>
+
+          {/* Fornecedor */}
           <div className="flex flex-col gap-3">
             <Label htmlFor="fornecedor">Fornecedor</Label>
-            <Input id="fornecedor" name="fornecedor" defaultValue={resource?.getAttribute("supplier")} />
+            <Input
+              id="fornecedor"
+              name="fornecedor"
+              defaultValue={resource?.getAttribute("supplier")}
+            />
           </div>
+
+          {/* Status */}
           <div className="flex items-center gap-3">
             <Label htmlFor="status">Status</Label>
-            <Switch id="status" checked={active} onCheckedChange={setActive} />
+            <Switch
+              id="status"
+              checked={active}
+              onCheckedChange={setActive}
+            />
           </div>
+
           <DrawerFooter>
-            <Button type="submit">Salvar</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Salvando..." : "Salvar"}
+            </Button>
             <DrawerClose asChild>
               <Button variant="outline" type="button">
                 Cancelar

@@ -1,9 +1,8 @@
 "use client"
-import { ChartAreaInteractive } from "@/components/chart-area-interactive"
-import { DataTable, defaultColumns } from "@/components/data-table"
-import { SectionCards } from "@/components/section-cards"
 
-import data from "./data.json"
+import { ChartLineMultiple } from "@/components/graficos/chart-line-multiple"
+import { SectionCards } from "@/components/section-cards"
+import { SectionGraphCards } from "@/components/section-graph-cards"
 
 export default function Page() {
   return (
@@ -12,9 +11,9 @@ export default function Page() {
       <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
         <SectionCards />
         <div className="px-4 lg:px-6">
-          <ChartAreaInteractive />
+          <ChartLineMultiple />
         </div>
-        <DataTable data={data} columns={defaultColumns} />
+        <SectionGraphCards />
       </div>
     </div>
   </div>

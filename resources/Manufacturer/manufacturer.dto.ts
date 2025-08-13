@@ -9,6 +9,11 @@ export class ManufacturerDto extends BaseDTO {
     public manufacturerResource: ManufacturerResource;
 
     public createFromColoquentResource(resource: ManufacturerResource): ManufacturerDto {
+        
+        if (!resource || typeof resource.getApiId !== "function") {
+            return this
+        }
+
         this.id = resource.getApiId();
         this.description = resource.getAttribute('description');
 

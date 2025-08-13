@@ -53,8 +53,9 @@ export class ComponentDto extends BaseDTO {
     public pcpDto: PcpDto;
 
     public createFromColoquentResource(resource: ComponentResource): ComponentDto {
-        if (!resource) {
-            return;
+
+        if (!resource || typeof resource.getApiId !== "function") {
+            return this
         }
 
         this.componentResource = resource;

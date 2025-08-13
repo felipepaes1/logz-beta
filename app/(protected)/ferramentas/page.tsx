@@ -12,9 +12,11 @@ import { PluralResponse } from "coloquent"
 import { FerramentaForm } from "@/components/ferramentas/form"
 import { RowActions } from "@/components/ferramentas/row-actions"
 import type { Ferramenta } from "@/components/ferramentas/types"
+import { toast } from "sonner"
 
 
 export default function Page() {
+  const [isLoading, setIsLoading] = React.useState(true)
   const [rows, setRows] = React.useState<Ferramenta[]>([])
   const [items, setItems] = React.useState<ItemResource[]>([])
   const [manufacturers, setManufacturers] = React.useState<ManufacturerResource[]>([])
@@ -29,6 +31,7 @@ export default function Page() {
     })
     ItemGroupResource.get().then((response: PluralResponse<ItemGroupResource>) => {
       setItemGroups(response.getData())
+      setIsLoading(false)
     })
   }, [])
 
@@ -146,32 +149,43 @@ export default function Page() {
   )
 
   const form = (
-    <FerramentaForm
-      title="Nova Ferramenta"
-      manufacturers={manufacturers}
-      itemGroups={itemGroups}
-      onSubmit={(dto) => {
-        ItemResource.createOrUpdate(dto.clone().bindToSave())
-        setRows((prev) => [
-          ...prev,
-          {
-            id: prev.length + 1,
-            nome: dto.name,
-            codigo: dto.code,
-            grupo: dto.itemGroupResource?.getAttribute("description") || "",
-            fabricante: dto.manufacturerResource?.getAttribute("description") || "",
-            estoqueMinimo: dto.min_quantity,
-            estoqueAtual: dto.quantity,
-            fornecedor: "",
-            status: dto.active ? "Ativo" : "Inativo",
-            resource: new ItemResource(),
-            manufacturer: dto.manufacturerResource,
-            itemGroup: dto.itemGroupResource,
-          },
-        ])
-      }}
-    />
-  )
+  <FerramentaForm
+    title="Nova Ferramenta"
+    manufacturers={manufacturers}
+    itemGroups={itemGroups}
+    onSubmit={(dto) =>
+      toast.promise(
+        ItemResource
+          .createOrUpdate(dto.clone().bindToSave())
+          .then(() =>
+            setRows(prev => [
+              ...prev,
+              {
+                id: prev.length + 1,
+                nome: dto.name,
+                codigo: dto.code,
+                grupo: dto.itemGroupResource?.getAttribute("description") || "",
+                fabricante:
+                  dto.manufacturerResource?.getAttribute("description") || "",
+                estoqueMinimo: dto.min_quantity,
+                estoqueAtual: dto.quantity,
+                fornecedor: "",
+                status: dto.active ? "Ativo" : "Inativo",
+                resource: new ItemResource(),
+                manufacturer: dto.manufacturerResource,
+                itemGroup: dto.itemGroupResource,
+              },
+            ])
+          ),
+        {
+          loading: "Salvando ferramenta...",
+          success: "Ferramenta cadastrada!",
+          error: "Erro ao salvar ferramenta.",
+        }
+      )
+    }
+  />
+)
 
   return (
     <div className="flex flex-1 flex-col">
@@ -183,6 +197,7 @@ export default function Page() {
             columns={columns}
             addButtonLabel="Nova Ferramenta"
             renderAddForm={form}
+            isLoading={isLoading}
           />
         </div>
       </div>

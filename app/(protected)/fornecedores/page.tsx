@@ -43,7 +43,7 @@ export default function Page() {
       { accessorKey: "vendedor", header: "Vendedor" },
       { accessorKey: "email", header: "Email" },
       { accessorKey: "telefone", header: "Telefone" },
-      { accessorKey: "prazo", header: "Prazo (dias)" },
+      { accessorKey: "prazo", header: "Prazo em dias (Lead Time)" },
       { accessorKey: "observacoes", header: "Observações" },
       {
         id: "actions",

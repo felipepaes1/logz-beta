@@ -10,17 +10,24 @@ import { CentroCustoForm } from "@/components/centro-de-custos/form"
 import { RowActions } from "@/components/centro-de-custos/row-actions"
 import type { CentroCusto } from "@/components/centro-de-custos/types"
 import { PluralResponse } from "coloquent"
+import { toast } from "sonner"
 
 
 export default function Page() {
+  const [isLoading, setIsLoading] = React.useState(true)
   const [rows, setRows] = React.useState<CentroCusto[]>([])
   const [machines, setMachines] = React.useState<MachineResource[]>([])
 
-  React.useEffect(() => {
+  function reload() {
     MachineResource.get().then((response: PluralResponse<MachineResource>) => {
       setMachines(response.getData())
+      setIsLoading(false)
     })
-  }, [])
+  }
+
+  React.useEffect(() => {
+      reload()
+    }, [])
 
   React.useEffect(() => {
     const formatted = machines.map((m) => ({
@@ -107,23 +114,23 @@ export default function Page() {
   )
 
   const form = (
-    <CentroCustoForm
-      title="Novo Centro de Custo"
-      onSubmit={(dto) => {
-        MachineResource.inviteOrUpdate(dto.clone().bindToSave())
-        setRows((prev) => [
-          ...prev,
-          {
-            id: prev.length + 1,
-            descricao: dto.description,
-            codigo: dto.code,
-            status: dto.active ? "Ativo" : "Inativo",
-            resource: new MachineResource(),
-          },
-        ])
-      }}
-    />
-  )
+  <CentroCustoForm
+    title="Novo Centro de Custo"
+    onSubmit={(dto) => {
+      const promise = MachineResource
+        .inviteOrUpdate(dto.clone().bindToSave())
+        .then(reload)
+
+      toast.promise(promise, {
+        loading: "Salvando centro de custo...",
+        success: "Centro de custo cadastrado!",
+        error: "Erro ao salvar centro de custo.",
+      })
+
+      return promise
+    }}
+  />
+)
 
   return (
     <div className="flex flex-1 flex-col">
@@ -135,6 +142,7 @@ export default function Page() {
             columns={columns}
             addButtonLabel="Novo Centro de Custo"
             renderAddForm={form}
+            isLoading={isLoading}
           />
         </div>
       </div>

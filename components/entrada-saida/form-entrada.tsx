@@ -24,6 +24,17 @@ import { ComponentTypeEnum } from "@/resources/Component/component.enum"
 import { ItemResource } from "@/resources/Item/item.resource"
 import { ItemGroupResource } from "@/resources/ItemGroup/item-group.resource"
 import { CollaboratorResource } from "@/resources/Collaborator/collaborator.resource"
+import { cn } from "@/lib/utils"
+
+interface Props {
+  onSubmit: (dto: ComponentDto) => Promise<unknown>
+  resource?: ComponentResource
+  itemGroups: ItemGroupResource[]
+  items: ItemResource[]
+  collaborators: CollaboratorResource[]
+  title?: string
+  disableEdition?: boolean
+}
 
 export function EntradaForm({
   onSubmit,
@@ -33,15 +44,7 @@ export function EntradaForm({
   collaborators,
   title = "Cadastrar Entrada",
   disableEdition,
-}: {
-  onSubmit: (dto: ComponentDto) => void
-  resource?: ComponentResource
-  itemGroups: ItemGroupResource[]
-  items: ItemResource[]
-  collaborators: CollaboratorResource[]
-  title?: string
-  disableEdition?: boolean
-}) {
+}: Props) {
   const itemRelation = resource?.getRelation("item") as ItemResource | undefined
   const groupRelation = itemRelation?.getRelation("itemGroup") as
     | ItemGroupResource
@@ -70,6 +73,16 @@ export function EntradaForm({
     resource?.getRelation("order")?.getApiId() ? String(resource?.getRelation("order")?.getApiId()) : ""
   )
 
+  const [submitting, setSubmitting] = React.useState(false)
+  const [errors, setErrors] = React.useState<{
+      group?: string
+      item?: string
+      collaborator?: string
+      unitPrice?: string
+      quantity?: string
+    }>({})
+
+
   const filteredItems = React.useMemo(() => {
     return items.filter((i) => {
       const g = i.getRelation("itemGroup") as ItemGroupResource | undefined
@@ -79,103 +92,166 @@ export function EntradaForm({
 
   const total = unitPrice * quantity
 
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+
+    const newErrors: typeof errors = {}
+    if (!group) newErrors.group = "Campo obrigatório"
+    if (!item) newErrors.item = "Campo obrigatório"
+    if (!collaborator) newErrors.collaborator = "Campo obrigatório"
+    if (unitPrice <= 0) newErrors.unitPrice = "Informe um valor"
+    if (quantity <= 0) newErrors.quantity = "Informe um valor"
+
+    if (Object.keys(newErrors).length) {
+      setErrors(newErrors)
+      return
+    }
+    setErrors({})
+
+    const dto = new ComponentDto()
+    dto.createFromColoquentResource(resource ?? new ComponentResource())
+    dto.type = ComponentTypeEnum.IN
+    dto.unitPrice = unitPrice
+    dto.quantity = quantity
+    dto.totalPrice = total
+    dto.itemGroupResource = itemGroups.find(
+      (g) => g.getApiId()?.toString() === group
+    )!
+    dto.itemResource = items.find((i) => i.getApiId()?.toString() === item)!
+    dto.collaboratorResource = collaborators.find(
+      (c) => c.getApiId()?.toString() === collaborator
+    )!
+
+    try {
+      setSubmitting(true)
+      await onSubmit(dto)
+      ;(e.currentTarget as HTMLFormElement).reset()
+      setGroup("")
+      setItem("")
+      setCollaborator("")
+      setUnitPrice(0)
+      setQuantity(0)
+      setErrors({})
+      e.currentTarget
+        .closest("[data-state=open]")
+        ?.querySelector<HTMLButtonElement>("button[data-close]")
+        ?.click()
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <DrawerContent>
       <DrawerHeader>
         <DrawerTitle>{title}</DrawerTitle>
       </DrawerHeader>
       <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            const dto = new ComponentDto()
-            dto.createFromColoquentResource(resource ?? new ComponentResource())
-            dto.type = ComponentTypeEnum.IN
-            dto.unitPrice = unitPrice
-            dto.quantity = quantity
-            const groupResource = itemGroups.find(
-              (g) => String(g.getApiId()) === group
-            )
-            const itemResource = items.find(
-              (i) => String(i.getApiId()) === item
-            )
-            const collaboratorResource = collaborators.find(
-              (c) => String(c.getApiId()) === collaborator
-            )
-            if (groupResource) dto.itemGroupResource = groupResource
-            if (itemResource) dto.itemResource = itemResource
-            if (collaboratorResource) dto.collaboratorResource = collaboratorResource
-            dto.totalPrice = dto.unitPrice * dto.quantity
-            onSubmit(dto)
-          }}
-        >
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="grupo">Grupo</Label>
-            <Select value={group} onValueChange={setGroup} disabled={disableEdition}>
-              <SelectTrigger id="grupo" className="w-full">
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-1">
+            <Label>Grupo</Label>
+            <Select
+              value={group}
+              onValueChange={setGroup}
+              disabled={disableEdition}
+            >
+              <SelectTrigger className={cn(errors.group && "border-destructive")}>
                 <SelectValue placeholder="Selecione um grupo" />
               </SelectTrigger>
               <SelectContent>
                 {itemGroups.map((g) => (
-                  <SelectItem key={String(g.getApiId())} value={String(g.getApiId())}>
+                  <SelectItem key={g.getApiId()} value={g.getApiId()!.toString()}>
                     {g.getAttribute("description")}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.group && (
+              <span className="text-destructive text-xs">{errors.group}</span>
+            )}
           </div>
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="ferramenta">Ferramenta</Label>
-            <Select value={item} onValueChange={setItem} disabled={disableEdition}>
-              <SelectTrigger id="ferramenta" className="w-full">
+
+          <div className="flex flex-col gap-1">
+            <Label>Ferramenta</Label>
+            <Select
+              value={item}
+              onValueChange={setItem}
+              disabled={disableEdition}
+            >
+              <SelectTrigger className={cn(errors.item && "border-destructive")}>
                 <SelectValue placeholder="Selecione uma ferramenta" />
               </SelectTrigger>
               <SelectContent>
                 {filteredItems.map((i) => (
-                  <SelectItem key={String(i.getApiId())} value={String(i.getApiId())}>
+                  <SelectItem key={i.getApiId()} value={i.getApiId()!.toString()}>
                     {i.getAttribute("name")}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.item && (
+              <span className="text-destructive text-xs">{errors.item}</span>
+            )}
           </div>
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="colaborador">Colaborador</Label>
+
+          <div className="flex flex-col gap-1">
+            <Label>Colaborador</Label>
             <Select value={collaborator} onValueChange={setCollaborator}>
-              <SelectTrigger id="colaborador" className="w-full">
+              <SelectTrigger
+                className={cn(errors.collaborator && "border-destructive")}
+              >
                 <SelectValue placeholder="Selecione um colaborador" />
               </SelectTrigger>
               <SelectContent>
                 {collaborators.map((c) => (
-                  <SelectItem key={String(c.getApiId())} value={String(c.getApiId())}>
+                  <SelectItem
+                    key={c.getApiId()}
+                    value={c.getApiId()!.toString()}
+                  >
                     {c.getAttribute("name")}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {errors.collaborator && (
+              <span className="text-destructive text-xs">
+                {errors.collaborator}
+              </span>
+            )}
           </div>
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="precoUnitario">Preço unitário</Label>
-            <Input
-              id="precoUnitario"
-              name="precoUnitario"
-              type="number"
-              step="0.01"
-              value={unitPrice}
-              onChange={(e) => setUnitPrice(Number(e.target.value))}
-            />
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1">
+              <Label>Preço unitário</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={unitPrice}
+                onChange={(e) => setUnitPrice(Number(e.target.value))}
+                className={cn(errors.unitPrice && "border-destructive")}
+              />
+              {errors.unitPrice && (
+                <span className="text-destructive text-xs">
+                  {errors.unitPrice}
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label>Quantidade</Label>
+              <Input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+                className={cn(errors.quantity && "border-destructive")}
+              />
+              {errors.quantity && (
+                <span className="text-destructive text-xs">
+                  {errors.quantity}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="quantidade">Quantidade</Label>
-            <Input
-              id="quantidade"
-              name="quantidade"
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-            />
-          </div>
+
           <div className="flex flex-col gap-3">
             <Label>Total</Label>
             <span>
@@ -185,6 +261,7 @@ export function EntradaForm({
               }).format(total)}
             </span>
           </div>
+
           <div className="flex flex-col gap-3">
             <Label htmlFor="ordemCompra">Ordem de compra</Label>
             <Input
@@ -194,10 +271,13 @@ export function EntradaForm({
               onChange={(e) => setOrder(e.target.value)}
             />
           </div>
+
           <DrawerFooter>
-            <Button type="submit">Salvar</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Salvando..." : "Salvar"}
+            </Button>
             <DrawerClose asChild>
-              <Button variant="outline" type="button">
+              <Button variant="outline" type="button" data-close>
                 Cancelar
               </Button>
             </DrawerClose>

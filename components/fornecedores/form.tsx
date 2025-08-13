@@ -93,7 +93,7 @@ export function FornecedorForm({ onSubmit, initialValues, title }: FornecedorFor
             </div>
           </div>
           <div className="flex flex-col gap-3">
-            <Label htmlFor="prazo">Prazo (dias)</Label>
+            <Label htmlFor="prazo">Prazo em dias (Lead Time)</Label>
             <Input id="prazo" name="prazo" type="number" defaultValue={initialValues?.prazo} />
           </div>
           <div className="flex flex-col gap-3">

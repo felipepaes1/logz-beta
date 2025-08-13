@@ -32,9 +32,9 @@ export class BaseResource extends Model {
     
 
     protected static getSelectedTenancyId(): string {
-        const storedUser =  localStorage.getItem('@user_response');
-
-        console.log(storedUser);
+        if (typeof window === 'undefined') return '';
+        const storedUser = localStorage.getItem('@user_response');
+        
         if (storedUser) {
             const userResponse: any = JSON.parse(storedUser);
             const _authData: HttpColoquentResponse = userResponse?.axiosResponse.data;
@@ -66,11 +66,8 @@ export class BaseResource extends Model {
     }
 
     private static async getParentTenancyIds(): Promise<Array<string>> {
-        const storedUser =  localStorage.getItem('@user_response');
-
-        if (!storedUser) {
-            return [];
-        }
+        if (typeof window === 'undefined') return [];
+        const storedUser = localStorage.getItem('@user_response');
 
         const userResponse: any = JSON.parse(storedUser);
         const selectedTenancyId: string = await this.getSelectedTenancyId();

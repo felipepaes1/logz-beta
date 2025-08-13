@@ -14,17 +14,61 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { CollaboratorResource } from "@/resources/Collaborator/collaborator.resource"
 import { CollaboratorDto } from "@/resources/Collaborator/collaborator.dto"
+import { cn } from "@/lib/utils"
 
-interface ColaboradorFormProps {
-  onSubmit: (c: CollaboratorDto) => void
+interface Props {
+  onSubmit: (dto: CollaboratorDto) => Promise<unknown>
   resource?: CollaboratorResource
   title: string
 }
 
-export function ColaboradorForm({ onSubmit, resource, title }: ColaboradorFormProps) {
+export function ColaboradorForm({ onSubmit, resource, title }: Props) {
   const [active, setActive] = React.useState(
     resource?.getAttribute("active") ?? true
   )
+  const [submitting, setSubmitting] = React.useState(false)
+  const [errors, setErrors] = React.useState<{ nome?: string; codigo?: string; senha?: string }>(
+    {}
+  )
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    const form = e.currentTarget
+    const data = new FormData(form)
+
+    const nome = String(data.get("nome") || "")
+    const codigo = String(data.get("codigo") || "")
+    const senha = String(data.get("senha") || "")
+
+    const newErrors: { nome?: string; codigo?: string; senha?: string} = {}
+    if (!nome.trim()) newErrors.nome = "Campo obrigatório"
+    if (!codigo.trim()) newErrors.codigo = "Campo obrigatório"
+    if (!senha.trim()) newErrors.senha = "Campo obrigatório"
+
+    if (Object.keys(newErrors).length) {
+      setErrors(newErrors)
+      return
+    }
+    setErrors({})
+
+    const dto = new CollaboratorDto()
+    if (resource) dto.createFromColoquentResource(resource)
+    dto.name = nome
+    dto.code = codigo
+    dto.active = active
+
+    try {
+      setSubmitting(true)
+      await onSubmit(dto)
+      form.reset()
+      setActive(true)
+      form
+        .closest("[data-state=open]")
+        ?.querySelector("button[data-close]")?.click()
+    } finally {
+      setSubmitting(false)
+    }
+  }
 
   return (
     <DrawerContent>
@@ -32,37 +76,65 @@ export function ColaboradorForm({ onSubmit, resource, title }: ColaboradorFormPr
         <DrawerTitle>{title}</DrawerTitle>
       </DrawerHeader>
       <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            const form = e.currentTarget
-            const data = new FormData(form)
-            const dto = new CollaboratorDto()
-            dto.createFromColoquentResource(resource ?? new CollaboratorResource())
-            dto.name = String(data.get("nome") || "")
-            dto.code = String(data.get("codigo") || "")
-            dto.active = active
-            onSubmit(dto)
-            form.reset()
-          }}
-        >
-          <div className="flex flex-col gap-3">
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          <div className="flex flex-col gap-1">
             <Label htmlFor="nome">Nome</Label>
-            <Input id="nome" name="nome" defaultValue={resource?.getAttribute("name")} />
+            <Input
+              id="nome"
+              name="nome"
+              defaultValue={resource?.getAttribute("name")}
+              className={cn(errors.nome && "border-destructive")}
+            />
+            {errors.nome && (
+              <span className="text-destructive text-xs">{errors.nome}</span>
+            )}
           </div>
-          <div className="flex flex-col gap-3">
-            <Label htmlFor="codigo">Código</Label>
-            <Input id="codigo" name="codigo" defaultValue={resource?.getAttribute("code")} />
+
+          <Label htmlFor="nome">Configurações do Aplicativo</Label>
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="codigo">Código / Login</Label>
+            <Input
+              id="codigo"
+              name="codigo"
+              defaultValue={resource?.getAttribute("code")}
+              className={cn(errors.codigo && "border-destructive")}
+            />
+            {errors.codigo && (
+              <span className="text-destructive text-xs">{errors.codigo}</span>
+            )}
           </div>
+
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="login">Senha</Label>
+            <Input
+              id="senha"
+              name="senha"
+              defaultValue={resource?.getAttribute("password-app")}
+              className={cn(errors.senha && "border-destructive")}
+            />
+            {errors.senha && (
+              <span className="text-destructive text-xs">{errors.senha}</span>
+            )}
+          </div>
+
           <div className="flex items-center gap-3">
             <Label htmlFor="status">Status</Label>
-            <Switch id="status" checked={active} onCheckedChange={setActive} />
+            <Switch
+              id="status"
+              checked={active}
+              onCheckedChange={setActive}
+            />
           </div>
           <DrawerFooter>
-            <Button type="submit">Salvar</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Salvando..." : "Salvar"}
+            </Button>
             <DrawerClose asChild>
-              <Button variant="outline" type="button">Cancelar</Button>
+              <Button variant="outline" type="button" data-close>
+                Cancelar
+              </Button>
             </DrawerClose>
           </DrawerFooter>
         </form>

@@ -107,6 +107,7 @@ function dtoToRow(dto: ComponentDto): Movimento {
 }
 
 export default function Page() {
+  const [isLoading, setIsLoading] = React.useState(true)
   const [rows, setRows] = React.useState<Movimento[]>([])
   const [components, setComponents] = React.useState<ComponentResource[]>([])
   const [itemGroups, setItemGroups] = React.useState<ItemGroupResource[]>([])
@@ -127,6 +128,7 @@ export default function Page() {
       .get()
       .then((response: PluralResponse<ComponentResource>) => {
         setComponents(response.getData())
+        setIsLoading(false)
       })
     ItemGroupResource.get().then((r: PluralResponse<ItemGroupResource>) => {
       setItemGroups(r.getData())
@@ -143,6 +145,7 @@ export default function Page() {
     PcpResource.get().then((r: PluralResponse<PcpResource>) => {
       setPcps(r.getData())
     })
+    
   }, [])
 
   React.useEffect(() => {
@@ -235,6 +238,7 @@ export default function Page() {
             onDataChange={setRows}
             columns={columns}
             headerActions={headerActions}
+            isLoading={isLoading}
           />
         </div>
       </div>

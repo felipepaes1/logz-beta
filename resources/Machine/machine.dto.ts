@@ -9,6 +9,11 @@ export class MachineDto extends BaseDTO {
     public machineResource: MachineResource;
 
     public createFromColoquentResource(resource: MachineResource): MachineDto {
+
+        if (!resource || typeof resource.getApiId !== "function") {
+            return this
+        }
+
         this.machineResource = resource;
 
         this.id = resource.getApiId();

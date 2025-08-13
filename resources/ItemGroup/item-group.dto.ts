@@ -9,6 +9,11 @@ export class ItemGroupDto extends BaseDTO {
     public itemGroupResource: ItemGroupResource;
 
     public createFromColoquentResource(resource: ItemGroupResource): ItemGroupDto {
+
+        if (!resource || typeof resource.getApiId !== "function") {
+            return this
+        }
+
         this.id = resource?.getApiId();
         this.description = resource?.getAttribute('description');
 

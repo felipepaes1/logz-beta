@@ -11,9 +11,14 @@ export class CollaboratorDto extends BaseDTO {
     public document_number: string;
     public phone: string;
 
-    public collaboratorResource: CollaboratorResource;
+    public collaboratorResource?: CollaboratorResource;
 
-    public createFromColoquentResource(collaboratorResource: CollaboratorResource): CollaboratorDto {
+    public createFromColoquentResource(collaboratorResource: CollaboratorResource | null): CollaboratorDto {
+
+        if (!collaboratorResource || typeof collaboratorResource.getApiId !== "function") {
+            return this
+        }
+        
         this.collaboratorResource = collaboratorResource;
         this.id = collaboratorResource.getApiId();
         this.tenant_id = collaboratorResource.getAttribute('tenant_id');

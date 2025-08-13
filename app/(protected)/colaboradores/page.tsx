@@ -9,15 +9,17 @@ import { CollaboratorResource } from "@/resources/Collaborator/collaborator.reso
 import { PluralResponse } from "coloquent"
 import { ColaboradorForm } from "@/components/colaboradores/form"
 import { RowActions } from "@/components/colaboradores/row-actions"
+import { toast } from "sonner"
 import type { Colaborador } from "@/components/colaboradores/types"
 
-
 export default function Page() {
+  const [isLoading, setIsLoading] = React.useState(true)
   const [rows, setRows] = React.useState<Colaborador[]>([])
   const [collaborators, setCollaborators] = React.useState<CollaboratorResource[]>([])
 
   function reload() {
     CollaboratorResource.get().then((response: PluralResponse<CollaboratorResource>) => {
+      setIsLoading(false)
       setCollaborators(response.getData())
     })
   }
@@ -100,10 +102,19 @@ export default function Page() {
   const form = (
     <ColaboradorForm
       title="Novo Colaborador"
-      loading={false}
-      onSubmit={(dto) => {
-        CollaboratorResource.inviteOrUpdate(dto.clone().bindToSave())
-      }}
+      onSubmit={(dto) =>
+        toast.promise(
+          CollaboratorResource
+            .inviteOrUpdate(dto.clone().bindToSave()).then(
+            reload
+          ),
+          {
+            loading: "Salvando colaborador...",
+            success: "Colaborador cadastrado!",
+            error: "Erro ao salvar colaborador.",
+          }
+        )
+      }
     />
   )
 
@@ -117,6 +128,7 @@ export default function Page() {
             columns={columns}
             addButtonLabel="Novo Colaborador"
             renderAddForm={form}
+            isLoading={isLoading}
           />
         </div>
       </div>
