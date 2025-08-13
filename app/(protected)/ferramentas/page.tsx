@@ -17,10 +17,17 @@ import { toast } from "sonner"
 
 export default function Page() {
   const [isLoading, setIsLoading] = React.useState(true)
+  const [ready, setReady] = React.useState(false);
   const [rows, setRows] = React.useState<Ferramenta[]>([])
   const [items, setItems] = React.useState<ItemResource[]>([])
   const [manufacturers, setManufacturers] = React.useState<ManufacturerResource[]>([])
   const [itemGroups, setItemGroups] = React.useState<ItemGroupResource[]>([])
+
+  React.useEffect(() => {
+  const tid = localStorage.getItem("@tenancy_id");
+  const hasToken = !!(localStorage.getItem("@token") || document.cookie.includes("token="));
+  setReady(!!tid && hasToken);
+  }, []);
 
   React.useEffect(() => {
     ItemResource.with(["manufacturer", "itemGroup"]).get().then((response: PluralResponse<ItemResource>) => {

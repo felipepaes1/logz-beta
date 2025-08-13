@@ -1,7 +1,8 @@
-import { AppSidebar } from "@/components/app-sidebar"
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
-import { SiteHeader } from "@/components/site-header"
-import type { ReactNode } from "react"
+import { AppSidebar } from "@/components/app-sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SiteHeader } from "@/components/site-header";
+import ColoquentInit from "@/app/coloquent-init"; 
+import type { ReactNode } from "react";
 
 export default function ProtectedLayout({ children }: { children: ReactNode }) {
   return (
@@ -11,11 +12,12 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
         "--header-height": "calc(var(--spacing) * 12)",
       } as React.CSSProperties}
     >
+      <ColoquentInit />
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
         {children}
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

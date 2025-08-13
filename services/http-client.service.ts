@@ -173,12 +173,15 @@ export class HttpClientService implements HttpClient {
   }
 
   private bindUrlForTenancy(url: string) {
-    if (url && this.getSelectedTenancyId() && (url + '').includes(':tenant_id')) {
-      const [path, qs] = (url + '').split('?');
-      const interpolated = path.replace(':tenant_id', this.getSelectedTenancyId());
-      return qs ? `${interpolated}?${qs}` : interpolated;
-    }
-    return url;
+  const tid = this.getSelectedTenancyId();
+  if (url && tid && (url + '').includes(':tenant_')) {
+    const [path, qs] = (url + '').split('?');
+    const interpolated = path
+      .replace(/:tenant_id/g, tid)
+      .replace(/:tenancy_id/g, tid);
+    return qs ? `${interpolated}?${qs}` : interpolated;
+  }
+  return url;
   }
 
   // Lê token de @token → @user_response → cookie
