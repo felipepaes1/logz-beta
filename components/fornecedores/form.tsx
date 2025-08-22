@@ -13,14 +13,17 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import type { Fornecedor } from "./types"
+import { ProviderDto } from "@/resources/Provider/provider.dto"
+import type { ProviderResource } from "@/resources/Provider/provider.resource"
 
 interface FornecedorFormProps {
-  onSubmit: (f: Omit<Fornecedor, "id">) => void
-  initialValues?: Partial<Fornecedor>
   title: string
+  onSubmit: (dto: ProviderDto) => Promise<void> | void
+  initialValues?: Partial<Fornecedor>
+  resource?: ProviderResource
 }
 
-export function FornecedorForm({ onSubmit, initialValues, title }: FornecedorFormProps) {
+export function FornecedorForm({ onSubmit, initialValues, resource, title }: FornecedorFormProps) {
   const [phone, setPhone] = React.useState(initialValues?.telefone || "")
 
   React.useEffect(() => {
@@ -57,14 +60,19 @@ export function FornecedorForm({ onSubmit, initialValues, title }: FornecedorFor
             e.preventDefault()
             const form = e.currentTarget
             const data = new FormData(form)
-            onSubmit({
-              empresa: String(data.get("empresa") || ""),
-              vendedor: String(data.get("vendedor") || ""),
-              email: String(data.get("email") || ""),
-              telefone: String(data.get("telefone") || ""),
-              prazo: Number(data.get("prazo") || 0),
-              observacoes: String(data.get("observacoes") || ""),
-            })
+            const dto = new ProviderDto()
+
+            if (resource) {
+              dto.createFromColoquentResource(resource)
+            }
+            dto.company_name = String(data.get("empresa") || "")
+            dto.seller = String(data.get("vendedor") || "")
+            dto.email = String(data.get("email") || "")
+            dto.phone = String(data.get("telefone") || "")
+            dto.delivery_time = Number(data.get("prazo") || 0)
+            dto.observation = String(data.get("observacoes") || "")
+
+            onSubmit(dto)
             form.reset()
           }}
         >

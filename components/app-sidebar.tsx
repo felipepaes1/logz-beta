@@ -74,7 +74,6 @@ export const sidebarData = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { resolvedTheme } = useTheme()
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -85,11 +84,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <Image
-                src={resolvedTheme && resolvedTheme == "dark" ? logoDark : logoLight}
-                alt="Logz Tech Logo"
-                className="h-24"
-              />
+              <div className="h-24 w-full flex items-center justify-center" aria-label="Logz Tech Logo">
+                {/* Logo claro (aparece no tema claro) */}
+                <Image
+                  src={logoLight}
+                  alt="Logz Tech Logo (light)"
+                  className="h-24 w-auto dark:hidden"
+                  loading="lazy"
+                  decoding="async"
+                />
+                {/* Logo escuro (aparece no tema escuro) */}
+                <Image
+                  src={logoDark}
+                  alt="Logz Tech Logo (dark)"
+                  className="h-24 w-auto hidden dark:block"
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

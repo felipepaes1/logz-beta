@@ -1,12 +1,13 @@
 "use client"
 
+import React from "react"
+import Link from "next/link"
 import {
   IconShoppingCart,
   IconActivityHeartbeat,
   IconAlertTriangle,
 } from "@tabler/icons-react"
 import { Badge } from "@/components/ui/badge"
-import React from "react"
 import {
   Card,
   CardAction,
@@ -48,9 +49,10 @@ export function SectionCards() {
   const consumosMedia = 15_139.72
 
   const alertas = [
-    { id: 1, nome: "INSERT RCGT 1204", saldo: 3 },
-    { id: 2, nome: "BROCA Ø6 mm HSS", saldo: 5 },
-    { id: 3, nome: "LIMA ROTATIVA P803", saldo: 2 },
+    { id: 1, nome: "INSERT RCGT 1204", qtd_minima: 4, saldo: 3 },
+    { id: 2, nome: "BROCA Ø6 mm HSS", qtd_minima: 6, saldo: 5 },
+    { id: 3, nome: "LIMA ROTATIVA P803", qtd_minima: 4, saldo: 2 },
+    { id: 4, nome: "LIMA DO FREIO", qtd_minima: 3, saldo: 2 },
   ]
 
   return (
@@ -115,33 +117,46 @@ export function SectionCards() {
   </CardFooter>
 </Card>
 
-      {/* ALERTAS */}
-      <Card>
-        <CardHeader>
-          <CardDescription className="flex items-center gap-1.5">
-            <IconAlertTriangle className="size-4 text-amber-500" />
-            Alertas (Estoque baixo)
-          </CardDescription>
-        </CardHeader>
+{/* ALERTAS */}
+<Card>
+  <CardHeader>
+    <CardDescription className="flex items-center gap-1.5">
+      <IconAlertTriangle className="size-4 text-amber-500" />
+      Alertas (Estoque baixo)
+    </CardDescription>
+  </CardHeader>
 
-        <CardContent className="px-6 pb-0">
-          <ul className="grid gap-2 text-sm">
-            {alertas.slice(0, 3).map((a) => (
-              <li key={a.id} className="flex justify-between">
-                <span className="truncate">{a.nome}</span>
-                <Badge variant="destructive">{a.saldo}</Badge>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
+  <CardContent className="px-6 pb-0">
+    {/* Cabeçalho das colunas */}
+    <div className="grid grid-cols-[1fr_auto_auto] items-center mb-2 text-xs font-medium text-muted-foreground">
+      <span></span>
+      <span className="text-center">Qtd mínima</span>
+      <span className="text-center">Qtd atual</span>
+    </div>
 
-        <CardFooter className="justify-end">
-          <Button variant="outline" size="sm">
-            Ver todos
-          </Button>
-        </CardFooter>
-      </Card>
-      
+    <ul className="grid gap-2 text-sm">
+      {alertas.slice(0, 4).map((a) => (
+        <li
+          key={a.id}
+          className="grid grid-cols-[1fr_auto_auto] items-center"
+        >
+          <span className="truncate">{a.nome}</span>
+          <span className="text-center">{a.qtd_minima}</span>
+          <Badge variant="destructive" className="justify-center">
+            {a.saldo}
+          </Badge>
+        </li>
+      ))}
+    </ul>
+  </CardContent>
+
+    <CardFooter className="justify-end">
+    <Button asChild variant="outline" size="sm">
+      <Link href="/ferramentas">Ver todos</Link>
+    </Button>
+  </CardFooter>
+  </Card>
+
       <Card className="flex flex-col">
       <CardHeader className="items-center pb-0">
         <CardTitle>Eficiência de Compra</CardTitle>

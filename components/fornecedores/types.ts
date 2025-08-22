@@ -6,4 +6,6 @@ export interface Fornecedor {
   telefone: string
   prazo: number
   observacoes: string
+  resource?: import("@/resources/Provider/provider.resource").ProviderResource
+  dto?: import("@/resources/Provider/provider.dto").ProviderDto
 }

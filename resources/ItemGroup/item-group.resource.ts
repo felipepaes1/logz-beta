@@ -1,15 +1,15 @@
 import { BaseResource } from "../../base/BaseResource";
-import { ItemDto } from "../Item/item.dto";
+import { ItemGroupDto } from "./item-group.dto"
 
 export class ItemGroupResource extends BaseResource {
-    public static jsonApiType = 'item-groups';
+    public static jsonApiType = 'tenants/:tenant_id/item-groups';
     protected static table = 'item-groups';
 
-    public static async createOrUpdate(itemDto: ItemDto): Promise<any> {
-        return this.action('create-or-update', {item_dto: itemDto});
+    public static async createOrUpdate(dto: ItemGroupDto): Promise<any> {
+        return this.action('invite-or-update', { item_group_dto: dto });
     }
 
-    public static async saveAsNew(itemDto: ItemDto): Promise<any> {
-        return this.action('save-as-new', {item_dto: itemDto});
+    public static async saveAsNew(dto: ItemGroupDto): Promise<any> {
+        return this.action('invite-or-update', { item_group_dto: dto });
     }
 }

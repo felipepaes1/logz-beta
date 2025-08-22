@@ -8,6 +8,7 @@ export interface Ferramenta {
   estoqueAtual: number
   fornecedor: string
   status: string
+  preOrderer: number
   resource?: import("@/resources/Item/item.resource").ItemResource
   manufacturer?: import("@/resources/Manufacturer/manufacturer.resource").ManufacturerResource
   itemGroup?: import("@/resources/ItemGroup/item-group.resource").ItemGroupResource

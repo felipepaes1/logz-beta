@@ -22,8 +22,20 @@ import {
 import { ItemResource } from "@/resources/Item/item.resource"
 import { ManufacturerResource } from "@/resources/Manufacturer/manufacturer.resource"
 import { ItemGroupResource } from "@/resources/ItemGroup/item-group.resource"
+import { ItemGroupDto } from "@/resources/ItemGroup/item-group.dto"
 import { ItemDto } from "@/resources/Item/item.dto"
 import { cn } from "@/lib/utils"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { toast } from "sonner"
 
 interface FerramentaFormProps {
   onSubmit: (dto: ItemDto) => Promise<unknown>
@@ -50,6 +62,11 @@ export function FerramentaForm({
     resource?.getRelation("itemGroup")?.getApiId()?.toString() ?? ""
   )
   const [submitting, setSubmitting] = React.useState(false)
+  const [groups, setGroups] = React.useState<ItemGroupResource[]>(itemGroups)
+  React.useEffect(() => setGroups(itemGroups), [itemGroups])
+  const [newGroupOpen, setNewGroupOpen] = React.useState(false)
+  const [newGroupName, setNewGroupName] = React.useState("")
+  const [creatingGroup, setCreatingGroup] = React.useState(false)
   const [errors, setErrors] = React.useState<{
     nome?: string
     codigo?: string
@@ -67,7 +84,7 @@ export function FerramentaForm({
     const manufacturerRsc = manufacturers.find(
       (m) => m.getApiId()?.toString() === manufacturerId
     )
-    const itemGroupRsc = itemGroups.find(
+    const itemGroupRsc = groups.find(
       (g) => g.getApiId()?.toString() === itemGroupId
     )
 
@@ -153,7 +170,7 @@ export function FerramentaForm({
                 <SelectValue placeholder="Selecione um grupo" />
               </SelectTrigger>
               <SelectContent>
-                {itemGroups.map((g) => (
+                {groups.map((g) => (
                   <SelectItem
                     key={g.getApiId()}
                     value={g.getApiId()?.toString() || ""}
@@ -163,6 +180,14 @@ export function FerramentaForm({
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => setNewGroupOpen(true)}
+            >
+              + Novo Grupo
+            </Button>
             {errors.itemGroup && (
               <span className="text-destructive text-xs">
                 {errors.itemGroup}
@@ -242,6 +267,86 @@ export function FerramentaForm({
           </DrawerFooter>
         </form>
       </div>
+      {/* AlertDialog: Criar novo grupo (padrão de criação igual ao handleSubmit) */}
+      <AlertDialog open={newGroupOpen} onOpenChange={setNewGroupOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Novo grupo</AlertDialogTitle>
+            <AlertDialogDescription>
+              Informe o nome para cadastrar um novo grupo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          {/* Usamos um <form> para manter o mesmo padrão de submit/validação */}
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              const name = newGroupName.trim()
+              if (!name) {
+                toast.error("Informe o nome do grupo.")
+                return
+              }
+              try {
+                setCreatingGroup(true)
+
+                const dto = new ItemGroupDto()
+                dto.description = name
+
+                const created = await ItemGroupResource.createOrUpdate(
+                  dto
+                )
+                const returnedId =
+                  created?.data?.id ??
+                  created?.id ??
+                  created?.data?.data?.id ??
+                  null
+
+                const createdRsc = new ItemGroupResource()
+                if (returnedId) {
+                  createdRsc.setApiId(returnedId)
+                }
+                createdRsc.setAttribute("description", name)
+
+                setGroups((prev) => [...prev, createdRsc])
+                setItemGroupId(createdRsc.getApiId()?.toString() || "")
+
+                toast.success("Grupo criado com sucesso!")
+                setNewGroupName("")
+                setNewGroupOpen(false)
+              } catch {
+                toast.error("Não foi possível criar o grupo.")
+              } finally {
+                setCreatingGroup(false)
+              }
+            }}
+          >
+            <div className="py-2">
+              <Label htmlFor="novo-grupo" className="mb-1 block">
+                Nome do grupo
+              </Label>
+              <Input
+                id="novo-grupo"
+                value={newGroupName}
+                onChange={(e) => setNewGroupName(e.target.value)}
+                placeholder="Ex.: Fresas, Brocas..."
+                autoFocus
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                type="button"
+                disabled={creatingGroup}
+                onClick={() => setNewGroupName("")}
+              >
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction type="submit" disabled={creatingGroup || !newGroupName.trim()}>
+                {creatingGroup ? "Criando..." : "Confirmar"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </form>
+        </AlertDialogContent>
+      </AlertDialog>
     </DrawerContent>
   )
 }
