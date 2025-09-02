@@ -45,8 +45,8 @@ export function ChartBarLabelTopTools() {
   return (
       <Card>
         <CardHeader>
-          <CardTitle>Top Consumo de Máquinas</CardTitle>
-          <CardDescription>10 Máquinas mais consumistas</CardDescription>
+          <CardTitle>Top Consumo de Ferramentas</CardTitle>
+          <CardDescription>5 Ferramentas mais consumistas</CardDescription>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig}>

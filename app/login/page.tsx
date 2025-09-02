@@ -67,7 +67,7 @@ export default function LoginPage() {
 
  return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      <div className="hidden lg:flex basis-[65%] flex-col items-center justify-center bg-muted">
+      <div className="hidden lg:flex basis-[65%] flex-col items-center justify-center bg-gray-100">
 
       <Image
         src={heroMock}
