@@ -30,7 +30,7 @@ import {
 
 export default function Page() {
   const [isLoading, setIsLoading] = React.useState(true)
-  const [ready, setReady] = React.useState(false);
+  const [setReady] = React.useState(false);
   const [rows, setRows] = React.useState<Ferramenta[]>([])
   const [tab, setTab] = React.useState<"alertas" | "todos">("alertas")
   const [items, setItems] = React.useState<ItemResource[]>([])

@@ -1,6 +1,5 @@
 "use client"
 
-import { ChartBar, TrendingUp } from "lucide-react"
 import React from "react"
 import Link from "next/link"
 import {
@@ -10,7 +9,6 @@ import {
 } from "@tabler/icons-react"
 import {
   Card,
-  CardAction,
   CardDescription,
   CardFooter,
   CardHeader,

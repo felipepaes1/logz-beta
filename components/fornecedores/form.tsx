@@ -106,8 +106,11 @@ export function FornecedorForm({ onSubmit, initialValues, resource, title }: For
                 .closest("[data-state=open]")
                 ?.querySelector<HTMLButtonElement>("button[data-close]")
                 ?.click()
-            } catch (err) {
-              toast.error("Não foi possível salvar o fornecedor.")
+            } catch (error) {
+              const message =
+                (error as { message?: string })?.message ??
+                "Falha ao salvar fornecedor."
+              toast.error(message) // sonner
             } finally {
               setSubmitting(false)
             }

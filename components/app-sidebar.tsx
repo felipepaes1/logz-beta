@@ -26,8 +26,6 @@ import Image from "next/image"
 import logoDark from "@/assets/logo-logz-dark.svg"
 import logoLight from "@/assets/logo-logz-light.svg"
 
-import { useTheme } from "next-themes"
-
 export const sidebarData = {
   user: {
     name: "felipe.paes",

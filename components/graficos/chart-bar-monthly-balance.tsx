@@ -6,7 +6,6 @@ import {
   BarChart,
   CartesianGrid,
   XAxis,
-  YAxis,
   ReferenceLine,
   Cell,
 } from "recharts"
@@ -81,13 +80,6 @@ export function ChartBarMonthlyBalance({
     { tipo: "Consumo", value: consumoVal },
   ]
 
-  // calcula o topo do eixo Y considerando as médias
-  const computeMax = React.useMemo(() => {
-    const dataMax = Math.max(comprasVal, consumoVal)
-    const lineMax = Math.max(avgCompras, avgConsumo)
-    // pequeno headroom para o label da linha
-    return Math.max(dataMax, lineMax) * 1.1
-  }, [comprasVal, consumoVal, avgCompras, avgConsumo])
 
   return (
     <Card>
