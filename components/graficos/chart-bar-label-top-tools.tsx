@@ -20,16 +20,16 @@ import {
 export const description = "A bar chart with a custom label"
 
 const chartData = [
-  { month: "Inserto BDMT", desktop: 150, mobile: 80 },
-  { month: "Bedame 4mm", desktop: 100, mobile: 200 },
-  { month: "Broca MD D10", desktop: 137, mobile: 120 },
-  { month: "Broca de 14", desktop: 84, mobile: 190 },
-  { month: "Macho ", desktop: 100, mobile: 130 },
+  { tool: "Inserto BDMT", quantity: 150, mobile: 80 },
+  { tool: "Bedame 4mm", quantity: 100, mobile: 200 },
+  { tool: "Broca MD D10", quantity: 137, mobile: 120 },
+  { tool: "Broca de 14", quantity: 84, mobile: 190 },
+  { tool: "Macho ", quantity: 100, mobile: 130 },
 ]
 
 const chartConfig = {
-  desktop: {
-    label: "Desktop",
+  quantity: {
+    label: "quantity",
     color: "var(--primary)",
   },
   mobile: {
@@ -60,7 +60,7 @@ export function ChartBarLabelTopTools() {
             >
               <CartesianGrid horizontal={false} />
               <YAxis
-                dataKey="month"
+                dataKey="tool"
                 type="category"
                 tickLine={false}
                 tickMargin={10}
@@ -68,26 +68,26 @@ export function ChartBarLabelTopTools() {
                 tickFormatter={(value) => value.slice(0, 3)}
                 hide
               />
-              <XAxis dataKey="desktop" type="number" hide />
+              <XAxis dataKey="quantity" type="number" hide />
               <ChartTooltip
                 cursor={false}
                 content={<ChartTooltipContent indicator="line" />}
               />
               <Bar
-                dataKey="desktop"
+                dataKey="quantity"
                 layout="vertical"
-                fill="var(--color-desktop)"
+                fill="var(--color-quantity)"
                 radius={4}
               >
                 <LabelList
-                  dataKey="month"
+                  dataKey="tool"
                   position="insideLeft"
                   offset={8}
                   className="fill-(--color-label)"
                   fontSize={12}
                 />
                 <LabelList
-                  dataKey="desktop"
+                  dataKey="quantity"
                   position="right"
                   offset={8}
                   className="fill-foreground"
@@ -99,10 +99,10 @@ export function ChartBarLabelTopTools() {
         </CardContent>
         <CardFooter className="flex-col items-start gap-2 text-sm">
       {/*    <div className="flex gap-2 leading-none font-medium">
-            Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
+            Trending up by 5.2% this tool <TrendingUp className="h-4 w-4" />
           </div>
           <div className="text-muted-foreground leading-none">
-            Showing total visitors for the last 6 months
+            Showing total visitors for the last 6 tools
           </div> */}
         </CardFooter>
       </Card>
