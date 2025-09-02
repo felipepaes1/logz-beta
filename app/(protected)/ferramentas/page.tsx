@@ -436,7 +436,7 @@ export default function Page() {
               />
             </TabsContent>
 
-            <TabsContent value="todos" className="mt-4">
+            <TabsContent value="todos" className="mt-8">
               <DataTable
                 key="todos"
                 data={todosRows}

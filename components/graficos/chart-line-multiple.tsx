@@ -19,21 +19,21 @@ import {
 export const description = "A multiple line chart"
 
 const chartData = [
-  { month: "January", desktop: 186, mobile: 80 },
-  { month: "February", desktop: 305, mobile: 200 },
-  { month: "March", desktop: 237, mobile: 120 },
-  { month: "April", desktop: 73, mobile: 190 },
-  { month: "May", desktop: 209, mobile: 130 },
-  { month: "June", desktop: 214, mobile: 140 },
+  { month: "January", quantity: 186, quantidade: 80 },
+  { month: "February", quantity: 305, quantidade: 200 },
+  { month: "March", quantity: 237, quantidade: 120 },
+  { month: "April", quantity: 73, quantidade: 190 },
+  { month: "May", quantity: 209, quantidade: 130 },
+  { month: "June", quantity: 214, quantidade: 140 },
 ]
 
 const chartConfig = {
-  desktop: {
-    label: "Desktop",
+  quantity: {
+    label: "quantity",
     color: "var(--chart-1)",
   },
-  mobile: {
-    label: "Mobile",
+  quantidade: {
+    label: "quantidade",
     color: "var(--muted-foreground)",
   },
 } satisfies ChartConfig
@@ -66,16 +66,16 @@ export function ChartLineMultiple() {
 
             <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
             <Line
-              dataKey="desktop"
+              dataKey="quantity"
               type="monotone"
-              stroke="var(--color-desktop)"
+              stroke="var(--color-quantity)"
               strokeWidth={2}
               dot={true}
             />
             <Line
-              dataKey="mobile"
+              dataKey="quantidade"
               type="monotone"
-              stroke="var(--color-mobile)"
+              stroke="var(--color-quantidade)"
               strokeWidth={2}
               dot={true}
             />
