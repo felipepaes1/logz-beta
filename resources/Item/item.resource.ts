@@ -13,6 +13,14 @@ export class ItemResource extends BaseResource {
         return this.action('create-or-update', {item_dto: itemDto});
     }
 
+    public static async dismarkAsPreOrdered(itemIds: Array<number | string>): Promise<any> {
+        return this.action('dismark-as-pre-ordered', { item_ids: itemIds });
+    }
+
+    public static async markAsPreOrdered(itemIds: Array<number | string>): Promise<any> {
+        return this.action('mark-as-pre-ordered', { item_ids: itemIds });
+    }
+
     public static async saveAsNew(itemDto: ItemDto): Promise<any> {
         return this.action('save-as-new', {item_dto: itemDto});
     }

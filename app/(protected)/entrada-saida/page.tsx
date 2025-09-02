@@ -53,7 +53,6 @@ const baseColumns: ColumnDef<Movimento>[] = [
     cell: ({ row }) =>
       new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(row.original.data)),
   },
-  { accessorKey: "grupo", header: "Grupo" },
   { accessorKey: "codigo", header: "Código" },
   { accessorKey: "ferramenta", header: "Ferramenta" },
   { accessorKey: "maquina", header: "Máquina" },

@@ -1,6 +1,5 @@
 "use client"
 
-import { TrendingUp } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts"
 
 import {
@@ -21,12 +20,12 @@ import {
 export const description = "A bar chart with a custom label"
 
 const chartData = [
-  { month: "January", desktop: 186, mobile: 80 },
-  { month: "February", desktop: 305, mobile: 200 },
-  { month: "March", desktop: 237, mobile: 120 },
-  { month: "April", desktop: 73, mobile: 190 },
-  { month: "May", desktop: 209, mobile: 130 },
-  { month: "June", desktop: 214, mobile: 140 },
+  { month: "CNC 1", desktop: 186, mobile: 80 },
+  { month: "Torno 2", desktop: 275, mobile: 200 },
+  { month: "Torno 1", desktop: 237, mobile: 120 },
+  { month: "Freasadora", desktop: 73, mobile: 190 },
+  { month: "CNC 3", desktop: 209, mobile: 130 },
+
 ]
 
 const chartConfig = {
@@ -43,12 +42,12 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function ChartBarLabelCustom() {
+export function ChartBarLabelTopMachines() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Bar Chart - Custom Label</CardTitle>
-        <CardDescription>January - June 2024</CardDescription>
+        <CardTitle>Top Consumo de Ferramentas</CardTitle>
+        <CardDescription>5 Ferramentas mais consumistas</CardDescription>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>
@@ -100,12 +99,12 @@ export function ChartBarLabelCustom() {
         </ChartContainer>
       </CardContent>
       <CardFooter className="flex-col items-start gap-2 text-sm">
-        <div className="flex gap-2 leading-none font-medium">
+    {/*    <div className="flex gap-2 leading-none font-medium">
           Trending up by 5.2% this month <TrendingUp className="h-4 w-4" />
         </div>
         <div className="text-muted-foreground leading-none">
           Showing total visitors for the last 6 months
-        </div>
+        </div> */}
       </CardFooter>
     </Card>
   )

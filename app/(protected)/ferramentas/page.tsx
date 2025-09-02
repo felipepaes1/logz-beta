@@ -111,29 +111,31 @@ export default function Page() {
   }, [sortedRows])
 
   const handleTogglePreOrder = React.useCallback(
-    (row: Ferramenta, checked: boolean) => {
-      const next = checked ? 1 : 0
+  (row: Ferramenta, checked: boolean) => {
+    const optimistic = checked ? 1 : 0;
+
+    setRows(prev =>
+      prev.map(r => (r.id === row.id ? { ...r, preOrdered: optimistic } : r))
+    );
+
+    const p = checked
+      ? ItemResource.markAsPreOrdered([row.id])
+      : ItemResource.dismarkAsPreOrdered([row.id]);
+
+    toast.promise(p, {
+      loading: "Atualizando pedido de compra...",
+      success: "Status do pedido atualizado.",
+      error: "Não foi possível atualizar o status do pedido.",
+    });
+
+    p.catch(() => {
       setRows(prev =>
-        prev.map(r => (r.id === row.id ? { ...r, preOrdered: next } : r))
-      )
-      const res = row.resource.clone?.() ?? row.resource
-      res.setAttribute?.("pre_ordered", next)
-      res.setAttribute?.("pre-ordered", next) 
-      toast.promise(
-        ItemResource.createOrUpdate(res.bindToSave?.() ?? res),
-        {
-          loading: "Atualizando pedido de compra...",
-          success: "Status do pedido atualizado.",
-          error: "Não foi possível atualizar o status do pedido.",
-        }
-      ).catch(() => {
-        setRows(prev =>
-          prev.map(r => (r.id === row.id ? { ...r, preOrdered: row.preOrdered } : r))
-        )
-      })
-    },
-    [setRows]
-  )
+        prev.map(r => (r.id === row.id ? { ...r, preOrdered: row.preOrdered } : r))
+      );
+    });
+  },
+  [setRows]
+);
 
   const requestConfirmPreOrder = React.useCallback((row: Ferramenta) => {
     setPendingRow(row)
@@ -322,37 +324,34 @@ export default function Page() {
     title="Nova Ferramenta"
     manufacturers={manufacturers}
     itemGroups={itemGroups}
-    onSubmit={(dto) =>
-      toast.promise(
-        ItemResource
-          .createOrUpdate(dto.clone().bindToSave())
-          .then(() =>
-            setRows(prev => [
-              ...prev,
-              {
-                id: prev.length + 1,
-                nome: dto.name,
-                codigo: dto.code,
-                grupo: dto.itemGroupResource?.getAttribute("description") || "",
-                fabricante:
-                  dto.manufacturerResource?.getAttribute("description") || "",
-                estoqueMinimo: dto.min_quantity,
-                estoqueAtual: dto.quantity,
-                fornecedor: "",
-                status: dto.active ? "Ativo" : "Inativo",
-                resource: new ItemResource(),
-                manufacturer: dto.manufacturerResource,
-                itemGroup: dto.itemGroupResource,
-              },
-            ])
-          ),
-        {
-          loading: "Salvando ferramenta...",
-          success: "Ferramenta cadastrada!",
-          error: "Erro ao salvar ferramenta.",
-        }
+    onSubmit={(dto) => {
+      const p = ItemResource.createOrUpdate(dto.clone().bindToSave())
+      toast.promise(p, {
+        loading: "Salvando ferramenta...",
+        success: "Ferramenta cadastrada!",
+        error: "Erro ao salvar ferramenta.",
+      })
+      return p.then(() =>
+        setRows(prev => [
+          ...prev,
+          {
+            id: prev.length + 1,
+            nome: dto.name,
+            codigo: dto.code,
+            grupo: dto.itemGroupResource?.getAttribute("description") || "",
+            fabricante:
+              dto.manufacturerResource?.getAttribute("description") || "",
+            estoqueMinimo: dto.min_quantity,
+            estoqueAtual: dto.quantity,
+            fornecedor: "",
+            status: dto.active ? "Ativo" : "Inativo",
+            resource: new ItemResource(),
+            manufacturer: dto.manufacturerResource,
+            itemGroup: dto.itemGroupResource,
+          },
+        ])
       )
-    }
+    }}
   />
 )
 

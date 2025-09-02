@@ -4,6 +4,7 @@ import { MachineResource } from "./machine.resource";
 export class MachineDto extends BaseDTO {
     public description: string;
     public code: string;
+    public model: string;
     public active: boolean;
 
     public machineResource: MachineResource;
@@ -19,6 +20,7 @@ export class MachineDto extends BaseDTO {
         this.id = resource.getApiId();
         this.description = resource.getAttribute('description');
         this.code = resource.getAttribute('code');
+        this.model = resource.getAttribute('model');
         this.active = !!resource.getAttribute('active');
 
         return this;

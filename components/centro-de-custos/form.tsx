@@ -53,6 +53,7 @@ export function CentroCustoForm({ onSubmit, resource, title }: CentroCustoFormPr
   if (resource) dto.createFromColoquentResource(resource)
   dto.description = descricao
   dto.code = codigo
+  dto.model = modelo
   dto.active = active
 
   try {
@@ -101,7 +102,7 @@ export function CentroCustoForm({ onSubmit, resource, title }: CentroCustoFormPr
             <Input
               id="modelo"
               name="modelo"
-              defaultValue={resource?.getAttribute("modelo")}
+              defaultValue={resource?.getAttribute("model")}
               className={cn(errors.modelo && "border-destructive")}
             />
             {errors.codigo && (

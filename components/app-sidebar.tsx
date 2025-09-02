@@ -36,14 +36,9 @@ export const sidebarData = {
   },
   navMain: [
     {
-      title: "Dashboard",
+      title: "Panorama geral",
       url: "/dashboard",
       icon: IconDashboard,
-      items: [
-        { title: "Análise por Ferramentas",  url: "/dashboard/analise-por-ferramenta" },
-        { title: "Análise por Operadores",         url: "/dashboard/analise-por-operador" },
-        { title: "Análise por Centros de Custo",     url: "/dashboard/analise-por-centro-de-custo" },
-      ],
     },
     {
       title: "Colaboradores",

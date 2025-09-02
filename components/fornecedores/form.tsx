@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button"
 import type { Fornecedor } from "./types"
 import { ProviderDto } from "@/resources/Provider/provider.dto"
 import type { ProviderResource } from "@/resources/Provider/provider.resource"
+import { toast } from "sonner"
+import { cn } from "@/lib/utils"
 
 interface FornecedorFormProps {
   title: string
@@ -25,6 +27,8 @@ interface FornecedorFormProps {
 
 export function FornecedorForm({ onSubmit, initialValues, resource, title }: FornecedorFormProps) {
   const [phone, setPhone] = React.useState(initialValues?.telefone || "")
+  const [submitting, setSubmitting] = React.useState(false)
+  const [errors, setErrors] = React.useState<{ empresa?: string; vendedor?: string }>({})
 
   React.useEffect(() => {
     setPhone(initialValues?.telefone || "")
@@ -56,33 +60,90 @@ export function FornecedorForm({ onSubmit, initialValues, resource, title }: For
       <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
         <form
           className="flex flex-col gap-4"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault()
             const form = e.currentTarget
             const data = new FormData(form)
-            const dto = new ProviderDto()
 
+            const empresa = String(data.get("empresa") || "")
+            const vendedor = String(data.get("vendedor") || "")
+
+            const newErrors: { empresa?: string; vendedor?: string } = {}
+            if (!empresa.trim()) newErrors.empresa = "Campo obrigatório"
+            if (!vendedor.trim()) newErrors.vendedor = "Campo obrigatório"
+
+            if (Object.keys(newErrors).length) {
+              setErrors(newErrors)
+              // foca no primeiro campo inválido
+              const firstInvalid =
+                (newErrors.empresa && form.querySelector<HTMLInputElement>("#empresa")) ||
+                (newErrors.vendedor && form.querySelector<HTMLInputElement>("#vendedor"))
+              firstInvalid?.focus()
+              toast.error("Preencha os campos obrigatórios.")
+              return
+            }
+            setErrors({})
+
+            const dto = new ProviderDto()
             if (resource) {
               dto.createFromColoquentResource(resource)
             }
-            dto.company_name = String(data.get("empresa") || "")
-            dto.seller = String(data.get("vendedor") || "")
+            dto.company_name = empresa
+            dto.seller = vendedor
             dto.email = String(data.get("email") || "")
             dto.phone = String(data.get("telefone") || "")
             dto.delivery_time = Number(data.get("prazo") || 0)
             dto.observation = String(data.get("observacoes") || "")
 
-            onSubmit(dto)
-            form.reset()
+            try {
+              setSubmitting(true)
+              await onSubmit(dto)
+              toast.success("Fornecedor salvo com sucesso.")
+              form.reset()
+              setPhone("")
+              // fecha o drawer
+              form
+                .closest("[data-state=open]")
+                ?.querySelector<HTMLButtonElement>("button[data-close]")
+                ?.click()
+            } catch (err) {
+              toast.error("Não foi possível salvar o fornecedor.")
+            } finally {
+              setSubmitting(false)
+            }
           }}
         >
           <div className="flex flex-col gap-3">
             <Label htmlFor="empresa">Empresa</Label>
-            <Input id="empresa" name="empresa" defaultValue={initialValues?.empresa} />
+             <Input
+              id="empresa"
+              name="empresa"
+              defaultValue={initialValues?.empresa}
+              className={cn(errors.empresa && "border-destructive")}
+              aria-invalid={!!errors.empresa}
+              aria-describedby={errors.empresa ? "empresa-erro" : undefined}
+            />
+            {errors.empresa && (
+              <span id="empresa-erro" className="text-destructive text-xs">
+                {errors.empresa}
+              </span>
+            )}
           </div>
           <div className="flex flex-col gap-3">
             <Label htmlFor="vendedor">Vendedor</Label>
-            <Input id="vendedor" name="vendedor" defaultValue={initialValues?.vendedor} />
+            <Input
+              id="vendedor"
+              name="vendedor"
+              defaultValue={initialValues?.vendedor}
+              className={cn(errors.vendedor && "border-destructive")}
+              aria-invalid={!!errors.vendedor}
+              aria-describedby={errors.vendedor ? "vendedor-erro" : undefined}
+            />
+            {errors.vendedor && (
+              <span id="vendedor-erro" className="text-destructive text-xs">
+                {errors.vendedor}
+              </span>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-3">
@@ -109,9 +170,11 @@ export function FornecedorForm({ onSubmit, initialValues, resource, title }: For
             <Textarea id="observacoes" name="observacoes" defaultValue={initialValues?.observacoes} />
           </div>
           <DrawerFooter>
-            <Button type="submit">Salvar</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Salvando..." : "Salvar"}
+            </Button>
             <DrawerClose asChild>
-              <Button variant="outline" type="button">
+              <Button variant="outline" type="button" data-close>
                 Cancelar
               </Button>
             </DrawerClose>

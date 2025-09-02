@@ -34,6 +34,7 @@ export default function Page() {
       id: Number(m.getApiId()),
       descricao: m.getAttribute("description"),
       codigo: m.getAttribute("code"),
+      modelo: m.getAttribute("model"),
       status: m.getAttribute("active") ? "Ativo" : "Inativo",
       resource: m,
     }))
@@ -69,6 +70,7 @@ export default function Page() {
         enableHiding: false,
       },
       { accessorKey: "descricao", header: "Nome" },
+      { accessorKey: "modelo", header: "Modelo"},
       {
         accessorKey: "status",
         header: "Status",

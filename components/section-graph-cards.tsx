@@ -1,7 +1,6 @@
-import { ChartBarLabelCustom } from "./graficos/chart-bar-label-custom"
+import { ChartBarLabelTopMachines } from "./graficos/chart-bar-label-top-machines"
+import { ChartBarLabelTopTools } from "./graficos/chart-bar-label-top-tools"
 import { TopColaboradoresCard } from "./top-5-collaborators"
-import { ChartBarDefault } from "./graficos/chart-bar-default"
-
 
 export function SectionGraphCards() {
   return (
@@ -9,9 +8,9 @@ export function SectionGraphCards() {
       
       <TopColaboradoresCard />
       
-      <ChartBarLabelCustom />
+      <ChartBarLabelTopMachines />
       
-      <ChartBarLabelCustom />
+      <ChartBarLabelTopTools />
     </div>
   )
 }

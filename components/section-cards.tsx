@@ -1,5 +1,6 @@
 "use client"
 
+import { ChartBar, TrendingUp } from "lucide-react"
 import React from "react"
 import Link from "next/link"
 import {
@@ -7,7 +8,6 @@ import {
   IconActivityHeartbeat,
   IconAlertTriangle,
 } from "@tabler/icons-react"
-import { Badge } from "@/components/ui/badge"
 import {
   Card,
   CardAction,
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
+import { ChartBarMonthlyBalance } from "@/components/graficos/chart-bar-monthly-balance"
 
 export function SectionCards() {
   const [value] = React.useState([60])
@@ -44,9 +45,8 @@ export function SectionCards() {
   }
 
   const comprasTotal = 121_524.39
-  const comprasMedia = 20_254.07
   const consumosTotal = 90_838.32
-  const consumosMedia = 15_139.72
+  const saldoEstoque = 2_345
 
   const alertas = [
     { id: 1, nome: "INSERT RCGT 1204", qtd_minima: 4, saldo: 3 },
@@ -56,111 +56,94 @@ export function SectionCards() {
   ]
 
   return (
-    <div className="grid grid-cols-1 gap-4 px-4 lg:px-6 *:shadow-xs *:bg-gradient-to-t *:from-primary/5 *:to-card dark:*:bg-card @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-      {/* COMPRAS */}
-<Card>
-  <CardHeader className="items-start gap-2">
-    <IconShoppingCart className="size-10 text-gray-400" />
-    <div>
-      <CardDescription className="flex flex-col text-lg mb-2">
-        Compras | Valor Total
-      </CardDescription>
-      <CardTitle className="text-2xl tabular-nums">
-        {comprasTotal.toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL",
-        })}
-      </CardTitle>
+      <div className="grid grid-cols-1 items-stretch gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
+      {/* === 3 STRIPS — sem Card, gap mínimo entre eles === */}
+  <div className="h-full flex flex-col gap-[2px]">
+  {/* COMPRAS */}
+  <div
+    role="group"
+    aria-label="Compras - indicadores"
+    className="
+      flex flex-1 h-full items-center gap-4
+      rounded-xl border px-4 py-2 shadow-xs
+      border-gray-300 bg-gray-100 text-gray-700
+      dark:border-gray-500/20 dark:bg-gray-900/40 dark:text-gray-200
+    "
+  >
+    <IconShoppingCart
+      aria-hidden
+      className="size-7 text-gray-500 dark:text-gray-400"
+    />
+    <div className="flex w-full items-center gap-4">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+          Valor Total Comprado
+        </p>
+        <p className="truncate text-lg font-semibold tabular-nums text-gray-900 dark:text-gray-50">
+          {comprasTotal.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          })}
+        </p>
+      </div>
     </div>
-  </CardHeader>
+  </div>
 
-  <CardFooter className="flex-col items-start gap-1.5">
-    <CardDescription className="flex flex-col text-lg mb-2">
-      Média Mensal
-    </CardDescription>
-    <CardTitle className="text-2xl tabular-nums">
-      {comprasMedia.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      })}
-    </CardTitle>
-  </CardFooter>
-</Card>
-
-{/* CONSUMOS */}
-<Card>
-  <CardHeader className="items-start gap-2">
-    <IconActivityHeartbeat className="size-10 text-sky-600" />
-    <div>
-      <CardDescription className="flex flex-col text-lg mb-2">
-        Consumos | Valor Total
-      </CardDescription>
-      <CardTitle className="text-2xl tabular-nums">
-        {consumosTotal.toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL",
-        })}
-      </CardTitle>
+  {/* CONSUMOS */}
+  <div
+    role="group"
+    aria-label="Consumos - indicadores"
+    className="
+      mt-4 flex flex-1 h-full items-center gap-4
+      rounded-xl border px-4 py-2 shadow-xs
+      border-blue-300 bg-blue-100 text-blue-700
+      dark:border-blue-500/20 dark:bg-blue-900/40 dark:text-blue-200
+    "
+  >
+    <IconActivityHeartbeat
+      aria-hidden
+      className="size-7 text-blue-500 dark:text-blue-400"
+    />
+    <div className="flex w-full items-center gap-4">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-blue-600 dark:text-blue-300">
+          Valor Total Consumido
+        </p>
+        <p className="truncate text-lg font-semibold tabular-nums text-blue-900 dark:text-blue-50">
+          {consumosTotal.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          })}
+        </p>
+      </div>
     </div>
-  </CardHeader>
+  </div>
 
-  <CardFooter className="flex-col items-start gap-1.5">
-    <CardDescription className="flex flex-col text-lg mb-2">
-      Média Mensal
-    </CardDescription>
-    <CardTitle className="text-2xl tabular-nums">
-      {consumosMedia.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      })}
-    </CardTitle>
-  </CardFooter>
-</Card>
-
-{/* ALERTAS */}
-<Card>
-  <CardHeader>
-    <CardDescription className="flex items-center gap-1.5">
-      <IconAlertTriangle className="size-4 text-amber-500" />
-      Alertas (Estoque baixo)
-    </CardDescription>
-  </CardHeader>
-
-  <CardContent className="px-6 pb-0">
-    {/* Cabeçalho das colunas */}
-    <div className="grid grid-cols-[1fr_auto_auto] items-center mb-2 text-xs font-medium text-muted-foreground">
-      <span></span>
-      <span className="text-center">Qtd mínima</span>
-      <span className="text-center">Qtd atual</span>
+  {/* ESTOQUE SEM MOVIMENTAÇÃO */}
+  <div
+    role="group"
+    aria-label="Saldo de estoque - indicadores"
+    className="flex flex-1 h-full items-center gap-4 mt-4 rounded-xl border border-rose-200/60 bg-rose-50 px-4 py-2 shadow-xs dark:border-rose-500/20 dark:bg-rose-950/40"
+  >
+    <IconAlertTriangle aria-hidden className="size-7 text-rose-600 dark:text-rose-400" />
+    <div className="flex w-full items-center gap-4">
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-rose-800/80 d  ark:text-rose-200">Estoque sem Movimentação</p>
+        <p className="truncate text-lg font-semibold tabular-nums text-rose-950 dark:text-rose-50">
+           {saldoEstoque.toLocaleString("pt-BR",{
+            style: "currency",
+            currency: "BRL",
+          })}
+         </p>
+      </div>
     </div>
+  </div>
+</div>
 
-    <ul className="grid gap-2 text-sm">
-      {alertas.slice(0, 4).map((a) => (
-        <li
-          key={a.id}
-          className="grid grid-cols-[1fr_auto_auto] items-center"
-        >
-          <span className="truncate">{a.nome}</span>
-          <span className="text-center">{a.qtd_minima}</span>
-          <Badge variant="destructive" className="justify-center">
-            {a.saldo}
-          </Badge>
-        </li>
-      ))}
-    </ul>
-  </CardContent>
-
-    <CardFooter className="justify-end">
-    <Button asChild variant="outline" size="sm">
-      <Link href="/ferramentas">Ver todos</Link>
-    </Button>
-  </CardFooter>
-  </Card>
-
-      <Card className="flex flex-col">
+<Card className="flex flex-col">
       <CardHeader className="items-center pb-0">
         <CardTitle>Eficiência de Compra</CardTitle>
-        <CardDescription>Últimos 3 meses</CardDescription>
+        <CardDescription></CardDescription>
       </CardHeader>
       <CardContent className="flex flex-1 items-center pb-0">
         <div className="w-full max-w-md mx-auto">
@@ -199,6 +182,55 @@ export function SectionCards() {
         </div>
       </CardFooter>
     </Card>
+
+      <ChartBarMonthlyBalance
+      monthLabel="Setembro/2025"
+      compras={5182300}
+      consumo={4721000}
+      valuesInCents
+      avgCompras={60000} 
+      avgConsumo={35000}
+    />
+
+{/* ALERTAS */}
+<Card className="flex h-full flex-col">
+  <CardHeader>
+  <div className="flex items-center gap-2">
+    <IconAlertTriangle className="size-4 text-amber-500" />
+    <CardTitle>Alertas (Estoque baixo)</CardTitle>
+  </div>
+    <CardDescription className="flex items-center gap-1.5">
+
+    </CardDescription>
+  </CardHeader>
+
+  <CardContent className="px-6 pb-0">
+    {/* Cabeçalho das colunas */}
+    <div className="grid grid-cols-[1fr_auto_auto] items-center mb-2 text-xs font-medium text-muted-foreground">
+      <span></span>
+      <span className="text-center">Qtd atual</span>
+    </div>
+
+    <ul className="grid gap-2 text-sm">
+      {alertas.slice(0, 4).map((a) => (
+        <li
+          key={a.id}
+          className="grid grid-cols-[1fr_auto_auto] items-center"
+        >
+          <span className="truncate">{a.nome}</span>
+            <strong>{a.saldo}</strong>
+        </li>
+      ))}
+    </ul>
+  </CardContent>
+
+    <CardFooter className="justify-end">
+    <Button asChild variant="outline" size="sm">
+      <Link href="/ferramentas">Ver todos</Link>
+    </Button>
+  </CardFooter>
+  </Card>
+
     </div>
   )
 }

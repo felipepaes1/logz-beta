@@ -170,14 +170,23 @@ export function FerramentaForm({
                 <SelectValue placeholder="Selecione um grupo" />
               </SelectTrigger>
               <SelectContent>
-                {groups.map((g) => (
-                  <SelectItem
-                    key={g.getApiId()}
-                    value={g.getApiId()?.toString() || ""}
-                  >
-                    {g.getAttribute("description")}
-                  </SelectItem>
-                ))}
+                {groups.map((g, idx) => {
+                  const rawId =
+                    g.getApiId?.() ??
+                    g.getAttribute?.("id") ??
+                    null
+                  const safeId = String(rawId ?? `tmp-${idx}-${g.getAttribute?.("description") ?? "sem-desc"}`)
+
+                  const label =
+                    g.getAttribute?.("description") ??
+                    `Grupo ${idx + 1}`
+
+                  return (
+                    <SelectItem key={safeId} value={safeId}>
+                      {label}
+                    </SelectItem>
+                  )
+                })}
               </SelectContent>
             </Select>
             <Button
@@ -256,7 +265,7 @@ export function FerramentaForm({
           </div>
 
           <DrawerFooter>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="dark: text-white">
               {submitting ? "Salvando..." : "Salvar"}
             </Button>
             <DrawerClose asChild>
@@ -302,13 +311,13 @@ export function FerramentaForm({
                   null
 
                 const createdRsc = new ItemGroupResource()
-                if (returnedId) {
-                  createdRsc.setApiId(returnedId)
-                }
+                
+                const newId = String(returnedId ?? `tmp-${Date.now()}`)
+                createdRsc.setApiId(newId)
                 createdRsc.setAttribute("description", name)
 
                 setGroups((prev) => [...prev, createdRsc])
-                setItemGroupId(createdRsc.getApiId()?.toString() || "")
+                setItemGroupId(newId)
 
                 toast.success("Grupo criado com sucesso!")
                 setNewGroupName("")
@@ -340,7 +349,7 @@ export function FerramentaForm({
               >
                 Cancelar
               </AlertDialogCancel>
-              <AlertDialogAction type="submit" disabled={creatingGroup || !newGroupName.trim()}>
+              <AlertDialogAction className="dark: text-white" type="submit" disabled={creatingGroup || !newGroupName.trim()}>
                 {creatingGroup ? "Criando..." : "Confirmar"}
               </AlertDialogAction>
             </AlertDialogFooter>

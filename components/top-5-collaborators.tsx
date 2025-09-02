@@ -20,18 +20,16 @@ import {
 type Colab = { id: number; nome: string; total: number }
 
 const mock: Colab[] = [
-  { id: 1, nome: "Ana Ribeiro",      total: 8230 },
+  { id: 1, nome: "Fernando Ribeiro",      total: 8230 },
   { id: 2, nome: "Bruno Carvalho",   total: 7990 },
-  { id: 3, nome: "Carla Fernandes",  total: 7560 },
-  { id: 4, nome: "Diego Santana",    total: 7215 },
-  { id: 5, nome: "Eduarda Martins",  total: 6880 },
+  { id: 3, nome: "Carlos Fernandes",  total: 7560 },
 ]
 
 export function TopColaboradoresCard() {
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle className="text-lg">Top 5 colaboradores</CardTitle>
+        <CardTitle className="text-lg">Top 3 colaboradores</CardTitle>
         <CardDescription>Consumo no último mês</CardDescription>
       </CardHeader>
 
