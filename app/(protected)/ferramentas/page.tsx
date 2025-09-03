@@ -30,7 +30,6 @@ import {
 
 export default function Page() {
   const [isLoading, setIsLoading] = React.useState(true)
-  const [setReady] = React.useState(false);
   const [rows, setRows] = React.useState<Ferramenta[]>([])
   const [tab, setTab] = React.useState<"alertas" | "todos">("alertas")
   const [items, setItems] = React.useState<ItemResource[]>([])
@@ -39,11 +38,6 @@ export default function Page() {
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [pendingRow, setPendingRow] = React.useState<Ferramenta | null>(null)
 
-  React.useEffect(() => {
-  const tid = localStorage.getItem("@tenancy_id");
-  const hasToken = !!(localStorage.getItem("@token") || document.cookie.includes("token="));
-  setReady(!!tid && hasToken);
-  }, []);
 
   React.useEffect(() => {
     ItemResource.with(["manufacturer", "itemGroup"]).get().then((response: PluralResponse<ItemResource>) => {
