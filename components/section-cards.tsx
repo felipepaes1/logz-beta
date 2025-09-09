@@ -18,9 +18,27 @@ import {
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { ChartBarMonthlyBalance } from "@/components/graficos/chart-bar-monthly-balance"
+import { DashboardPanoramaResource, type DashboardPanoramaAttributes } from "@/resources/Dashboard/dashboard.resource"
 
-export function SectionCards() {
-  const [value] = React.useState([60])
+type Props = { tenantId: number }
+export function SectionCards({ tenantId }: Props) {
+  const [data, setData] = React.useState<DashboardPanoramaAttributes | null>(null)
+  const [value, setValue] = React.useState([0])
+
+  React.useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      const res = await DashboardPanoramaResource.panorama()
+      if (!mounted) return
+      setData(res)
+      // eficiência do mês atual
+      const now = new Date()
+      const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
+      const pct = res.cards.eficiencia_compra.por_mes[key] ?? 0
+      setValue([pct])
+    })()
+    return () => { mounted = false }
+  }, [tenantId])
   const getColor = (value: number) => {
     if (value > 100) return "bg-red-600"
     if (value >= 90) return "bg-green-600"
@@ -42,16 +60,13 @@ export function SectionCards() {
     return "Baixa eficiência, compras excessivas em relação ao consumo"
   }
 
-  const comprasTotal = 121_524.39
-  const consumosTotal = 90_838.32
-  const saldoEstoque = 2_345
+  const comprasTotal = data?.cards.compras.total ?? 0
+  const consumosTotal = data?.cards.consumos.total ?? 0
+  const saldoEstoque = data?.cards.estoque_sem_movimentacao.total ?? 0
 
-  const alertas = [
-    { id: 1, nome: "INSERT RCGT 1204", qtd_minima: 4, saldo: 3 },
-    { id: 2, nome: "BROCA Ø6 mm HSS", qtd_minima: 6, saldo: 5 },
-    { id: 3, nome: "LIMA ROTATIVA P803", qtd_minima: 4, saldo: 2 },
-    { id: 4, nome: "LIMA DO FREIO", qtd_minima: 3, saldo: 2 },
-  ]
+  const alertas = (data?.cards.alertas_preview ?? []).map(a => ({
+    id: a.item_id, nome: a.name, qtd_minima: a.min_qty, saldo: a.qty
+  }))
 
   return (
       <div className="grid grid-cols-1 items-stretch gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
@@ -182,13 +197,13 @@ export function SectionCards() {
     </Card>
 
       <ChartBarMonthlyBalance
-      monthLabel="Setembro/2025"
-      compras={5182300}
-      consumo={4721000}
-      valuesInCents
-      avgCompras={60000} 
-      avgConsumo={35000}
-    />
+        monthLabel={new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date())}
+        compras={data?.cards.acompanhamento_mes_atual.compras_mes_atual ?? 0}
+        consumo={data?.cards.acompanhamento_mes_atual.consumo_mes_atual ?? 0}
+        valuesInCents={false}
+        avgCompras={data?.cards.acompanhamento_mes_atual.media_compras_3m ?? 0}
+        avgConsumo={data?.cards.acompanhamento_mes_atual.media_consumo_3m ?? 0}
+      />
 
 {/* ALERTAS */}
 <Card className="flex h-full flex-col">

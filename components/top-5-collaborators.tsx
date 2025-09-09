@@ -1,5 +1,7 @@
 "use client"
 
+import React from "react"
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Card,
@@ -16,16 +18,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { DashboardPanoramaResource } from "@/resources/Dashboard/dashboard.resource"
 
-type Colab = { id: number; nome: string; total: number }
+type Row = { id: string; nome: string; total: number }
+type Props = { tenantId: number }
 
-const mock: Colab[] = [
-  { id: 1, nome: "Fernando Ribeiro",      total: 8230 },
-  { id: 2, nome: "Bruno Carvalho",   total: 7990 },
-  { id: 3, nome: "Carlos Fernandes",  total: 7560 },
-]
-
-export function TopColaboradoresCard() {
+export function TopColaboradoresCard({ tenantId }: Props) {
+  const [rows, setRows] = React.useState<Row[]>([])
+  React.useEffect(() => {
+    let mounted = true
+    ;(async () => {
+      const res = await DashboardPanoramaResource.panorama()
+      if (!mounted) return
+      const map = res.tops_mes_atual.collaborators_top3 ?? []
+      setRows(map.map(r => ({ id: r.key, nome: r.name ?? r.key, total: r.valor })))
+    })()
+    return () => { mounted = false }
+  }, [tenantId])
   return (
     <Card className="@container/card">
       <CardHeader>
@@ -44,7 +53,7 @@ export function TopColaboradoresCard() {
           </TableHeader>
 
           <TableBody>
-            {mock.map((c) => (
+            {rows.map((c) => (
               <TableRow key={c.id}>
                 <TableCell>
                   <Avatar className="size-8">

@@ -1,5 +1,7 @@
 "use client"
 
+import React from "react"
+
 import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts"
 
 import {
@@ -16,32 +18,31 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
+import { DashboardPanoramaResource } from "@/resources/Dashboard/dashboard.resource"
 
 export const description = "A bar chart with a custom label"
 
-const chartData = [
-  { tool: "Inserto BDMT", quantity: 150, mobile: 80 },
-  { tool: "Bedame 4mm", quantity: 100, mobile: 200 },
-  { tool: "Broca MD D10", quantity: 137, mobile: 120 },
-  { tool: "Broca de 14", quantity: 84, mobile: 190 },
-  { tool: "Macho ", quantity: 100, mobile: 130 },
-]
 
 const chartConfig = {
-  quantity: {
-    label: "quantity",
-    color: "var(--primary)",
-  },
-  mobile: {
-    label: "Mobile",
-    color: "var(--chart-2)",
-  },
-  label: {
-    color: "var(--background)",
-  },
+  valor: { label: "Valor", color: "var(--primary)" },
 } satisfies ChartConfig
 
-export function ChartBarLabelTopTools() {
+
+  const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
+  const fmt = (n: number) => brl.format(n ?? 0)
+
+  type Props = { tenantId: number }
+  export function ChartBarLabelTopTools({ tenantId }: Props) {
+    const [rows, setRows] = React.useState<{ tool: string; valor: number }[]>([])
+    React.useEffect(() => {
+      let mounted = true
+      ;(async () => {
+        const res = await DashboardPanoramaResource.panorama()
+        if (!mounted) return
+        setRows((res.tops_mes_atual.items_top5 ?? []).map(r => ({ tool: r.name ?? r.key, valor: r.valor })))
+      })()
+      return () => { mounted = false }
+    }, [tenantId])
   return (
       <Card>
         <CardHeader>
@@ -52,7 +53,7 @@ export function ChartBarLabelTopTools() {
           <ChartContainer config={chartConfig}>
             <BarChart
               accessibilityLayer
-              data={chartData}
+              data={rows}
               layout="vertical"
               margin={{
                 right: 16,
@@ -68,15 +69,15 @@ export function ChartBarLabelTopTools() {
                 tickFormatter={(value) => value.slice(0, 3)}
                 hide
               />
-              <XAxis dataKey="quantity" type="number" hide />
+              <XAxis dataKey="valor" type="number" hide />
               <ChartTooltip
                 cursor={false}
-                content={<ChartTooltipContent indicator="line" />}
+                content={<ChartTooltipContent indicator="line" valueFormatter={(v)=>fmt(Number(v))} />}
               />
               <Bar
-                dataKey="quantity"
+                dataKey="valor"
                 layout="vertical"
-                fill="var(--color-quantity)"
+                fill="var(--color-valor)"
                 radius={4}
               >
                 <LabelList
@@ -87,12 +88,12 @@ export function ChartBarLabelTopTools() {
                   fontSize={12}
                 />
                 <LabelList
-                  dataKey="quantity"
+                  dataKey="valor"
                   position="right"
                   offset={8}
                   className="fill-foreground"
                   fontSize={12}
-                />
+                  formatter={(v: number) => fmt(v)} />
               </Bar>
             </BarChart>
           </ChartContainer>
