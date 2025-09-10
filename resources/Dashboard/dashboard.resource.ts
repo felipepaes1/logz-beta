@@ -11,15 +11,46 @@ export class DashboardPanoramaResource extends BaseResource {
    * GET /tenants/{tenant_id}/dashboard/panorama
    * Retorna o payload agregado (cards, séries e tops) exatamente como o backend envia.
    */
-  public static async panorama(params?: { date_from?: string; date_to?: string }) {
+  private static _inflight = new Map<string, Promise<DashboardPanoramaAttributes>>();
+  private static _cache = new Map<string, { exp: number; data: DashboardPanoramaAttributes }>();
+  private static _ttlMs = 30_000;
+
+  private static _key(params?: { date_from?: string | null; date_to?: string | null }) {
+    return JSON.stringify(params ?? {});
+  }
+
+  public static clearCache() {
+    this._inflight.clear();
+    this._cache.clear();
+  }
+
+  public static async panorama(params?: { date_from?: string | null; date_to?: string | null }) {
     const uri = (this as any).jsonApiType + "/panorama";
-    // Usa o HttpClientService (headers, auth, tenancy etc. já configurados)
-    const response = await this.getHttpClient().get(uri, params);
-    // O backend já está no formato { type, id, attributes } pelo BaseResource do backend.
-    // Aqui retornamos apenas os attributes para simplificar o uso no front.
-    const data = (response as any)?.axiosResponse?.data;
-    const attributes = data?.data?.attributes ?? data?.attributes ?? data;
-    return attributes as DashboardPanoramaAttributes;
+    const key = this._key(params);
+
+    // cache curto (evita refetch no mesmo view)
+    const cached = this._cache.get(key);
+    const now = Date.now();
+    if (cached && cached.exp > now) return cached.data;
+
+    // coalescing: se já tem em voo, reusa a mesma promise
+    const existing = this._inflight.get(key);
+    if (existing) return existing;
+
+    const p = (async () => {
+      const response = await this.getHttpClient().get(uri, params);
+      const data = (response as any)?.axiosResponse?.data;
+      const attributes = (data?.data?.attributes ?? data?.attributes ?? data) as DashboardPanoramaAttributes;
+      this._cache.set(key, { exp: now + this._ttlMs, data: attributes });
+      this._inflight.delete(key);
+      return attributes;
+    })().catch((e) => {
+      this._inflight.delete(key);
+      throw e;
+    });
+
+    this._inflight.set(key, p);
+    return p;
   }
 }
 

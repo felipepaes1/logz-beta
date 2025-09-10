@@ -1,4 +1,3 @@
-// services/http-client.service.ts
 import axios, { AxiosInstance, AxiosRequestConfig, ResponseType, AxiosError } from 'axios';
 import { HttpClient } from 'coloquent';
 import { HttpColoquentResponse } from '../helpers/coloquent-response-helper';
@@ -127,7 +126,9 @@ export class HttpClientService implements HttpClient {
 
     if (params) {
       const query: string = buildQueryStringFromParams(params);
-      url = url + "?" + query;
+      if (query && query.length > 0) {
+        url = url + (url.includes("?") ? "&" : "?") + query;
+      }
     }
 
     return <any>this.requestHandler.handle(this.axiosInstance.get(url, this.requestConfig));
