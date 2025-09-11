@@ -99,6 +99,7 @@ import {
   Tabs,
   TabsContent
 } from "@/components/ui/tabs"
+import { GripVertical } from "lucide-react"
 
 export const schema = z.object({
   id: z.number(),
@@ -212,7 +213,14 @@ export const defaultColumns: ColumnDef<z.infer<typeof schema>>[] = [
 ]
 
 function DraggableRow<T extends { id: number }>({ row }: { row: Row<T> }) {
-  const { transform, transition, setNodeRef, isDragging } = useSortable({
+  const {
+    transform,
+    transition,
+    setNodeRef,
+    isDragging,
+    attributes,
+    listeners,
+  } = useSortable({
     id: row.original.id,
   })
 
@@ -227,6 +235,18 @@ function DraggableRow<T extends { id: number }>({ row }: { row: Row<T> }) {
         transition: transition,
       }}
     >
+      <TableCell className="w-8 p-0 align-middle">
+        <button
+          type="button"
+          aria-label="Reordenar linha"
+          className="flex h-8 w-8 items-center justify-center cursor-grab touch-none"
+          {...attributes}
+          {...listeners}
+          data-dragging={isDragging}
+        >
+          <GripVertical className="h-4 w-4 opacity-60" />
+        </button>
+      </TableCell>
       {row.getVisibleCells().map((cell) => (
         <TableCell key={cell.id}>
           {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -244,6 +264,7 @@ export function DataTable<T extends { id: number }>({
   headerActions,
   onDataChange,
   isLoading = false,
+  withDragHandle = true,
 }: {
   data: T[]
   columns: ColumnDef<T>[]
@@ -252,6 +273,7 @@ export function DataTable<T extends { id: number }>({
   headerActions?: React.ReactNode
   onDataChange?: (rows: T[]) => void
   isLoading?: boolean
+  withDragHandle?: boolean
 }) {
   const [rows, setRows] = React.useState(() => data)
 
@@ -271,8 +293,17 @@ export function DataTable<T extends { id: number }>({
   })
   const sortableId = React.useId()
   const sensors = useSensors(
-    useSensor(MouseSensor, {}),
-    useSensor(TouchSensor, {}),
+    useSensor(MouseSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 120,
+        tolerance: 6,
+      },
+    }),
     useSensor(KeyboardSensor, {})
   )
   const isMobile = useIsMobile()
@@ -376,12 +407,16 @@ export function DataTable<T extends { id: number }>({
             modifiers={[restrictToVerticalAxis]}
             onDragEnd={handleDragEnd}
             sensors={sensors}
+            autoScroll={false}
             id={sortableId}
           >
             <Table>
               <TableHeader className="bg-muted sticky top-0 z-10">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
+                    {withDragHandle && (
+                      <TableHead aria-hidden className="w-8 p-0" />
+                    )}
                     {headerGroup.headers.map((header) => {
                       return (
                         <TableHead key={header.id} colSpan={header.colSpan}>
@@ -413,8 +448,12 @@ export function DataTable<T extends { id: number }>({
                     items={dataIds}
                     strategy={verticalListSortingStrategy}
                   >
-                    {table.getRowModel().rows.map((row) => (
-                      <DraggableRow key={row.id} row={row} />
+                      {table.getRowModel().rows.map((row) => (
+                      <DraggableRow
+                        key={row.id}
+                        row={row}
+                        withDragHandle={withDragHandle}
+                      />
                     ))}
                   </SortableContext>
                 ) : (

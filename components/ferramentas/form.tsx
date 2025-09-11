@@ -43,6 +43,7 @@ interface FerramentaFormProps {
   manufacturers: ManufacturerResource[]
   itemGroups: ItemGroupResource[]
   title: string
+  onRequestClose?: () => void
 }
 
 export function FerramentaForm({
@@ -51,6 +52,7 @@ export function FerramentaForm({
   manufacturers,
   itemGroups,
   title,
+  onRequestClose
 }: FerramentaFormProps) {
   const [active, setActive] = React.useState(
     resource?.getAttribute("active") ?? true
@@ -116,16 +118,23 @@ export function FerramentaForm({
       await onSubmit(dto)
       form.reset()
       setActive(true)
-      form
-        .closest("[data-state=open]")
-        ?.querySelector("button[data-close]")?.click()
+      onRequestClose?.()
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <DrawerContent>
+    <DrawerContent
+      onPointerDownOutside={(e) => {
+        e.preventDefault()
+        onRequestClose?.()
+      }}
+      onEscapeKeyDown={(e) => {
+        e.preventDefault()
+        onRequestClose?.()
+      }}
+    >
       <DrawerHeader>
         <DrawerTitle>{title}</DrawerTitle>
       </DrawerHeader>

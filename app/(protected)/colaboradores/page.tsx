@@ -129,6 +129,7 @@ export default function Page() {
             addButtonLabel="Novo Colaborador"
             renderAddForm={form}
             isLoading={isLoading}
+            withDragHandle
           />
         </div>
       </div>

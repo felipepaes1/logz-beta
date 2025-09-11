@@ -43,7 +43,11 @@ export function RowActions({ row, onDelete, onSave, manufacturers, itemGroups }:
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem onSelect={() => setOpen(true)}>
+          <DropdownMenuItem
+            onClick={() => {
+              setTimeout(() => setOpen(true), 0)
+            }}
+          >
             Editar
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -58,6 +62,7 @@ export function RowActions({ row, onDelete, onSave, manufacturers, itemGroups }:
           resource={row.resource}
           manufacturers={manufacturers}
           itemGroups={itemGroups}
+          onRequestClose={() => setOpen(false)}
           onSubmit={(dto) => {
             ItemResource.createOrUpdate(dto.clone().bindToSave())
             onSave(dto)

@@ -19,6 +19,7 @@ import { EntradaForm } from "@/components/entrada-saida/form-entrada"
 import { SaidaForm } from "@/components/entrada-saida/form-saida"
 import { RowActions } from "@/components/entrada-saida/row-actions"
 import type { Movimento } from "@/components/entrada-saida/types"
+import { toast } from "sonner"
 
 const baseColumns: ColumnDef<Movimento>[] = [
   {
@@ -114,9 +115,13 @@ export default function Page() {
   const [collaborators, setCollaborators] = React.useState<CollaboratorResource[]>([])
   const [machines, setMachines] = React.useState<MachineResource[]>([])
   const [pcps, setPcps] = React.useState<PcpResource[]>([])
+  const [isEntradaOpen, setIsEntradaOpen] = React.useState(false)
+  const [isSaidaOpen, setIsSaidaOpen] = React.useState(false)
 
-  React.useEffect(() => {
-    ComponentResource.orderBy("created_at", "desc")
+  const reload = React.useCallback(() => {
+    setIsLoading(true)
+    return ComponentResource
+      .orderBy("created_at", "desc")
       .with([
         "item.itemGroup",
         "item.manufacturer",
@@ -129,12 +134,22 @@ export default function Page() {
         setComponents(response.getData())
         setIsLoading(false)
       })
+  }, [])
+
+  const reloadItems = React.useCallback(() => {
+    return ItemResource
+      .with(["manufacturer", "itemGroup"])
+      .get()
+      .then((r: PluralResponse<ItemResource>) => setItems(r.getData()))
+  }, [])
+
+  React.useEffect(() => {
+    reload() 
+    reloadItems()
     ItemGroupResource.get().then((r: PluralResponse<ItemGroupResource>) => {
       setItemGroups(r.getData())
     })
-    ItemResource.with(["manufacturer", "itemGroup"]).get().then((r: PluralResponse<ItemResource>) => {
-      setItems(r.getData())
-    })
+
     CollaboratorResource.get().then((r: PluralResponse<CollaboratorResource>) => {
       setCollaborators(r.getData())
     })
@@ -145,7 +160,7 @@ export default function Page() {
       setPcps(r.getData())
     })
     
-  }, [])
+  }, [reload, reloadItems])
 
   React.useEffect(() => {
     const formatted = components.map((c) => {
@@ -169,35 +184,33 @@ export default function Page() {
             collaborators={collaborators}
             machines={machines}
             pcps={pcps}
-            onDelete={(id) => setRows((prev) => prev.filter((r) => r.id !== id))}
-            onSave={(dto) =>
-              setRows((prev) =>
-                prev.map((r) =>
-                  r.id === Number(dto.id) ? dtoToRow(dto) : r
-                )
-              )
-            }
+            onDelete={() => reload()}
+            onSave={() => reload()}
           />
         ),
       },
     ],
-    [setRows, itemGroups, items, collaborators, machines, pcps]
+    [reload, itemGroups, items, collaborators, machines, pcps]
   )
 
-  function addComponent(dto: ComponentDto) {
-    ComponentResource.createOrUpdate(dto.clone().bindToSave())
-    setRows((prev) => [
-      ...prev,
+  function saveWithToast(dto: ComponentDto) {
+    return toast.promise(
+      ComponentResource.createOrUpdate(dto.clone().bindToSave()).then(async () => {
+        await Promise.all([reload(), reloadItems()])
+        setIsEntradaOpen(false)
+        setIsSaidaOpen(false)
+      }),
       {
-        ...dtoToRow(dto),
-        id: prev.length + 1,
-      },
-    ])
+        loading: "Salvando movimento...",
+        success: "Movimento registrado!",
+        error: "Erro ao salvar movimento.",
+      }
+    )
   }
 
   const headerActions = (
     <>
-      <Drawer direction="right">
+      <Drawer direction="right" open={isEntradaOpen} onOpenChange={setIsEntradaOpen}>
         <DrawerTrigger asChild>
           <Button variant="outline" size="sm">Cadastrar entrada</Button>
         </DrawerTrigger>
@@ -205,12 +218,11 @@ export default function Page() {
           itemGroups={itemGroups}
           items={items}
           collaborators={collaborators}
-          onSubmit={(dto) => {
-            addComponent(dto)
-          }}
+          onSubmit={saveWithToast}
+          onRequestClose={() => setIsEntradaOpen(false)}
         />
       </Drawer>
-      <Drawer direction="right">
+      <Drawer direction="right" open={isSaidaOpen} onOpenChange={setIsSaidaOpen}>
         <DrawerTrigger asChild>
           <Button variant="outline" size="sm">Cadastrar Saída</Button>
         </DrawerTrigger>
@@ -220,9 +232,8 @@ export default function Page() {
           collaborators={collaborators}
           machines={machines}
           pcps={pcps}
-          onSubmit={(dto) => {
-            addComponent(dto)
-          }}
+          onSubmit={saveWithToast}
+          onRequestClose={() => setIsSaidaOpen(false)}
         />
       </Drawer>
     </>

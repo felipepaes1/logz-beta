@@ -39,7 +39,11 @@ export function RowActions({ row, onDelete, onSave }: RowActionsProps) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem onSelect={() => setOpen(true)}>
+          <DropdownMenuItem
+            onClick={() => {
+              setTimeout(() => setOpen(true), 0)
+            }}
+          >
             Editar
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -53,6 +57,7 @@ export function RowActions({ row, onDelete, onSave }: RowActionsProps) {
           title="Editar Fornecedor"
           initialValues={row}
           resource={row.resource}
+          onRequestClose={() => setOpen(false)}
           onSubmit={(dto) => {
             ProviderResource.createOrUpdate(dto.clone().bindToSave())
             onSave(dto)

@@ -38,6 +38,7 @@ interface Props {
   pcps: PcpResource[]
   title?: string
   disableEdition?: boolean
+  onRequestClose?: () => void
 }
 
 export function SaidaForm({
@@ -50,8 +51,9 @@ export function SaidaForm({
   pcps,
   title = "Cadastrar Saída",
   disableEdition,
-}: Props) {
-  /* ─────────────────────────── state ──────────────────────────── */
+  onRequestClose
+}: Props): React.ReactElement {
+ 
   const itemRelation = resource?.getRelation("item") as ItemResource | undefined
   const groupRelation = itemRelation?.getRelation("itemGroup") as
     | ItemGroupResource
@@ -74,12 +76,10 @@ export function SaidaForm({
   )
   const [pcp, setPcp] = React.useState(pcpRelation?.getApiId()?.toString() ?? "")
 
-  const [unitPrice, setUnitPrice] = React.useState<number>(
-    Number(resource?.getAttribute("unitPrice") ?? 0)
+  const [quantity, setQuantity] = React.useState<string>(
+    String(resource?.getAttribute("quantity") ?? 0)
   )
-  const [quantity, setQuantity] = React.useState<number>(
-    Number(resource?.getAttribute("quantity") ?? 0)
-  )
+  const quantityNumber = React.useMemo(() => Number(quantity) || 0, [quantity])
 
   const [submitting, setSubmitting] = React.useState(false)
   const [errors, setErrors] = React.useState<{
@@ -91,7 +91,23 @@ export function SaidaForm({
     quantity?: string
   }>({})
 
-  /* ──────────────────────── derived data ──────────────────────── */
+  const selectedItem = React.useMemo(
+    () => (item ? items.find((i) => i.getApiId()?.toString() === item) : undefined),
+    [items, item]
+  )
+
+  const availableQty = React.useMemo<number | null>(() => {
+    if (!selectedItem) return null
+    const candidates = ["available_quantity", "available", "stock", "quantity"] as const
+    for (const key of candidates) {
+      const v = Number(selectedItem.getAttribute?.(key))
+      if (Number.isFinite(v)) return Math.max(0, v)
+    }
+    return null
+  }, [selectedItem])
+  
+  const nf = React.useMemo(() => new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }), [])
+ 
   const filteredItems = React.useMemo(
     () =>
       items.filter((i) => {
@@ -101,19 +117,25 @@ export function SaidaForm({
     [items, group]
   )
 
-  const total = unitPrice * quantity
-
-  /* ────────────────────────── handlers ─────────────────────────── */
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (submitting) return
+    const formEl = e.currentTarget as HTMLFormElement
 
     const newErrors: typeof errors = {}
     if (!group) newErrors.group = "Campo obrigatório"
     if (!item) newErrors.item = "Campo obrigatório"
     if (!collaborator) newErrors.collaborator = "Campo obrigatório"
     if (!machine) newErrors.machine = "Campo obrigatório"
-    if (unitPrice <= 0) newErrors.unitPrice = "Informe um valor"
-    if (quantity <= 0) newErrors.quantity = "Informe um valor"
+    if (quantityNumber <= 0) newErrors.quantity = "Informe um valor"
+    if (
+      !newErrors.quantity &&
+      selectedItem &&
+      typeof availableQty === "number" &&
+      quantityNumber > availableQty
+    ) {
+      newErrors.quantity = `Quantidade maior que disponível (${nf.format(availableQty)})`
+    }
 
     if (Object.keys(newErrors).length) {
       setErrors(newErrors)
@@ -124,9 +146,7 @@ export function SaidaForm({
     const dto = new ComponentDto()
     dto.createFromColoquentResource(resource ?? new ComponentResource())
     dto.type = ComponentTypeEnum.OUT
-    dto.unitPrice = unitPrice
-    dto.quantity = quantity
-    dto.totalPrice = total
+    dto.quantity = quantityNumber
     dto.itemGroupResource = itemGroups.find(
       (g) => g.getApiId()?.toString() === group
     )!
@@ -142,35 +162,36 @@ export function SaidaForm({
       setSubmitting(true)
       await onSubmit(dto)
 
-      /* reset */
-      const formEl = e.currentTarget
-      formEl.reset()
+      try {
+        if (formEl && formEl.isConnected) formEl.reset()
+      } catch {}
       setGroup("")
       setItem("")
       setCollaborator("")
       setMachine("")
       setPcp("")
-      setUnitPrice(0)
-      setQuantity(0)
-
-      /* close drawer */
-      formEl
-        .closest("[data-state=open]")
-        ?.querySelector<HTMLButtonElement>("button[data-close]")
-        ?.click()
+      setQuantity("0")
     } finally {
       setSubmitting(false)
     }
   }
 
-  /* ─────────────────────────── render ──────────────────────────── */
   return (
-    <DrawerContent>
+    <DrawerContent
+      onPointerDownOutside={(e) => {
+        e.preventDefault()
+        onRequestClose?.()
+      }}
+      onEscapeKeyDown={(e) => {
+        e.preventDefault()
+        onRequestClose?.()
+      }}
+    >
       <DrawerHeader>
         <DrawerTitle>{title}</DrawerTitle>
       </DrawerHeader>
       <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit} aria-busy={submitting}>
           {/* grupo */}
           <div className="flex flex-col gap-1">
             <Label>Grupo</Label>
@@ -269,47 +290,42 @@ export function SaidaForm({
           </div>
 
           {/* preço e quantidade */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1">
-              <Label>Preço unitário</Label>
-              <Input
-                type="number"
-                step="0.01"
-                value={unitPrice}
-                onChange={(e) => setUnitPrice(Number(e.target.value))}
-                className={cn(errors.unitPrice && "border-destructive")}
-              />
-              {errors.unitPrice && (
-                <span className="text-destructive text-xs">
-                  {errors.unitPrice}
-                </span>
-              )}
-            </div>
+          <div className="grid grid-cols-1 gap-4">
             <div className="flex flex-col gap-1">
               <Label>Quantidade</Label>
               <Input
-                type="number"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                placeholder="0"
+                aria-label="Quantidade"
                 value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
+                onChange={(e) => {
+                  let v = e.target.value.replace(/\D/g, "")
+                  v = v.replace(/^0+(?=\d)/, "")
+                  if (v === "") v = "0"
+                  setQuantity(v)
+                }}
+                onWheel={(e) => {
+                  (e.target as HTMLElement).blur()
+                  setTimeout(() => (e.target as HTMLElement).focus(), 0)
+                }}
                 className={cn(errors.quantity && "border-destructive")}
               />
+              {item && typeof availableQty === "number" && (
+                <div className="text-xs text-muted-foreground mt-1" role="status" aria-live="polite">
+                  Quantidade disponível:{" "}
+                  <span className={cn(quantityNumber > availableQty && "text-destructive font-medium")}>
+                    {nf.format(availableQty)}
+                  </span>
+                </div>
+              )}
               {errors.quantity && (
                 <span className="text-destructive text-xs">
                   {errors.quantity}
                 </span>
               )}
             </div>
-          </div>
-
-          {/* total */}
-          <div className="flex flex-col gap-3">
-            <Label>Total</Label>
-            <span>
-              {new Intl.NumberFormat("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              }).format(total)}
-            </span>
           </div>
 
           {/* ordem serviço opcional */}

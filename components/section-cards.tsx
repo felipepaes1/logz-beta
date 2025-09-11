@@ -70,7 +70,7 @@ export function SectionCards({ tenantId }: Props) {
 
   return (
       <div className="grid grid-cols-1 items-stretch gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
-      {/* === 3 STRIPS — sem Card, gap mínimo entre eles === */}
+
   <div className="h-full flex flex-col gap-[2px]">
   {/* COMPRAS */}
   <div

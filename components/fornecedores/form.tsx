@@ -23,9 +23,10 @@ interface FornecedorFormProps {
   onSubmit: (dto: ProviderDto) => Promise<void> | void
   initialValues?: Partial<Fornecedor>
   resource?: ProviderResource
+  onRequestClose?: () => void
 }
 
-export function FornecedorForm({ onSubmit, initialValues, resource, title }: FornecedorFormProps) {
+export function FornecedorForm({ onSubmit, initialValues, resource, title, onRequestClose }: FornecedorFormProps) {
   const [phone, setPhone] = React.useState(initialValues?.telefone || "")
   const [submitting, setSubmitting] = React.useState(false)
   const [errors, setErrors] = React.useState<{ empresa?: string; vendedor?: string }>({})
@@ -53,7 +54,16 @@ export function FornecedorForm({ onSubmit, initialValues, resource, title }: For
   }
 
   return (
-    <DrawerContent>
+    <DrawerContent
+      onPointerDownOutside={(e) => {
+        e.preventDefault()
+        onRequestClose?.()
+      }}
+      onEscapeKeyDown={(e) => {
+        e.preventDefault()
+        onRequestClose?.()
+      }}
+    >
       <DrawerHeader>
         <DrawerTitle>{title}</DrawerTitle>
       </DrawerHeader>
@@ -74,7 +84,6 @@ export function FornecedorForm({ onSubmit, initialValues, resource, title }: For
 
             if (Object.keys(newErrors).length) {
               setErrors(newErrors)
-              // foca no primeiro campo inválido
               const firstInvalid =
                 (newErrors.empresa && form.querySelector<HTMLInputElement>("#empresa")) ||
                 (newErrors.vendedor && form.querySelector<HTMLInputElement>("#vendedor"))
@@ -101,11 +110,7 @@ export function FornecedorForm({ onSubmit, initialValues, resource, title }: For
               toast.success("Fornecedor salvo com sucesso.")
               form.reset()
               setPhone("")
-              // fecha o drawer
-              form
-                .closest("[data-state=open]")
-                ?.querySelector<HTMLButtonElement>("button[data-close]")
-                ?.click()
+              onRequestClose?.()
             } catch (error) {
               const message =
                 (error as { message?: string })?.message ??

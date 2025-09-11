@@ -58,7 +58,11 @@ export function RowActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-32">
-          <DropdownMenuItem onSelect={() => setOpen(true)}>
+          <DropdownMenuItem
+            onClick={() => {
+              setTimeout(() => setOpen(true), 0)
+            }}
+          >
             Editar
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -77,6 +81,7 @@ export function RowActions({
           machines={machines}
           pcps={pcps}
           disableEdition
+          onRequestClose={() => setOpen(false)}
           onSubmit={(dto) => {
             ComponentResource.createOrUpdate(dto.clone().bindToSave())
             onSave(dto)

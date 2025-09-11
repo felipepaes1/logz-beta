@@ -20,9 +20,10 @@ interface Props {
   onSubmit: (dto: CollaboratorDto) => Promise<unknown>
   resource?: CollaboratorResource
   title: string
+  onRequestClose?: () => void
 }
 
-export function ColaboradorForm({ onSubmit, resource, title }: Props) {
+export function ColaboradorForm({ onSubmit, resource, title, onRequestClose }: Props) {
   const [active, setActive] = React.useState(
     resource?.getAttribute("active") ?? true
   )
@@ -62,16 +63,23 @@ export function ColaboradorForm({ onSubmit, resource, title }: Props) {
       await onSubmit(dto)
       form.reset()
       setActive(true)
-      form
-        .closest("[data-state=open]")
-        ?.querySelector("button[data-close]")?.click()
+      onRequestClose?.()
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <DrawerContent>
+    <DrawerContent
+      onPointerDownOutside={(e) => {
+        e.preventDefault()
+        onRequestClose?.()
+      }}
+      onEscapeKeyDown={(e) => {
+        e.preventDefault()
+        onRequestClose?.()
+      }}
+    >
       <DrawerHeader>
         <DrawerTitle>{title}</DrawerTitle>
       </DrawerHeader>

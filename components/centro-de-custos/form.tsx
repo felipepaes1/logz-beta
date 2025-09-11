@@ -20,9 +20,10 @@ interface CentroCustoFormProps {
   onSubmit: (c: MachineDto) => void
   resource?: MachineResource
   title: string
+  onRequestClose?: () => void
 }
 
-export function CentroCustoForm({ onSubmit, resource, title }: CentroCustoFormProps) {
+export function CentroCustoForm({ onSubmit, resource, title, onRequestClose }: CentroCustoFormProps) {
   const [active, setActive] = React.useState(
     resource?.getAttribute("active") ?? true
   )
@@ -60,16 +61,23 @@ export function CentroCustoForm({ onSubmit, resource, title }: CentroCustoFormPr
     setSubmitting(true)
     await onSubmit(dto)              
     form.reset()
-    setActive(true)
-    form.closest("[data-state=open]")
-    ?.querySelector("button[data-close]")?.click()
+    onRequestClose?.()
   } finally {
     setSubmitting(false)
   }
 }
 
   return (
-    <DrawerContent>
+    <DrawerContent
+      onPointerDownOutside={(e) => {
+        e.preventDefault()
+        onRequestClose?.()
+      }}
+      onEscapeKeyDown={(e) => {
+        e.preventDefault()
+        onRequestClose?.()
+      }}
+    >
       <DrawerHeader>
         <DrawerTitle>{title}</DrawerTitle>
       </DrawerHeader>
