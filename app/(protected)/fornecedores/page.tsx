@@ -12,11 +12,27 @@ import { toast } from "sonner"
 import { PluralResponse } from "coloquent"
 import { ProviderResource } from "@/resources/Provider/provider.resource"
 import { ProviderDto } from "@/resources/Provider/provider.dto"
+import type { Fornecedor } from "@/components/fornecedores/types"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
 
 export default function Page() {
   const [rows, setRows] = React.useState<Fornecedor[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [ready, setReady] = React.useState(false)
+  const [deleteOpen, setDeleteOpen] = React.useState(false)
+  const [deleting, setDeleting] = React.useState(false)
+  const [deleteRow, setDeleteRow] = React.useState<Fornecedor | null>(null)
+  const focusRestoreRef = React.useRef<HTMLButtonElement>(null)
 
   React.useEffect(() => {
     const tid = localStorage.getItem("@tenancy_id")
@@ -54,34 +70,29 @@ export default function Page() {
     return () => { mounted = false }
   }, [ready])
 
+  const requestDelete = React.useCallback((row: Fornecedor) => {
+    setDeleteRow(row)
+    setDeleteOpen(true)
+  }, [])
+
+  const handleDelete = React.useCallback(async (row: Fornecedor) => {
+    const current = row
+    if (!current) return false
+    const prev = rows
+    setRows(p => p.filter(r => r.id !== current.id))
+    try {
+      await ProviderResource.deleteMany([current.id])
+      toast.success("Fornecedor excluído.")
+      return true
+    } catch (e: any) {
+      setRows(prev)
+      toast.error(e?.message ?? "Não foi possível excluir o fornecedor.")
+      return false
+    }
+  }, [rows])
+
   const columns = React.useMemo<ColumnDef<Fornecedor>[]>(
     () => [
-      {
-        id: "select",
-        header: ({ table }) => (
-          <div className="flex items-center justify-center">
-            <Checkbox
-              checked={
-                table.getIsAllPageRowsSelected() ||
-                (table.getIsSomePageRowsSelected() && "indeterminate")
-              }
-              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-              aria-label="Select all"
-            />
-          </div>
-        ),
-        cell: ({ row }) => (
-          <div className="flex items-center justify-center">
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="Select row"
-            />
-          </div>
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
       { accessorKey: "empresa", header: "Empresa" },
       { accessorKey: "vendedor", header: "Vendedor" },
       { accessorKey: "email", header: "Email" },
@@ -93,19 +104,7 @@ export default function Page() {
         cell: ({ row }) => (
           <RowActions
             row={row.original}
-            onDelete={async (id) => {
-              const current = rows.find(r => r.id === id)
-              if (!current?.resource) return
-              const prev = rows
-              setRows(p => p.filter(r => r.id !== id))
-              try {
-                await ProviderResource.delete(current.resource.bindToDelete?.() ?? current.resource)
-                toast.success("Fornecedor excluído.")
-              } catch {
-                setRows(prev)
-                toast.error("Não foi possível excluir o fornecedor.")
-              }
-            }}
+            onRequestDelete={requestDelete}
             onSave={async (dto: ProviderDto) => {
               const isNew = !dto.id
               const optimisticId = isNew
@@ -147,7 +146,7 @@ export default function Page() {
         ),
       },
     ],
-    [rows, setRows]
+    [rows, requestDelete]
   )
 
   const form = (
@@ -185,6 +184,12 @@ export default function Page() {
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <button
+            ref={focusRestoreRef}
+            tabIndex={-1}
+            aria-hidden
+            className="sr-only"
+          />
           <DataTable
             data={rows}
             onDataChange={setRows}
@@ -194,6 +199,53 @@ export default function Page() {
             isLoading={isLoading}
             emptyMessage="Nenhum fornecedor encontrado"
           />
+          <AlertDialog
+            open={deleteOpen}
+            onOpenChange={(open) => {
+              setDeleteOpen(open)
+              if (!open) setDeleteRow(null)
+            }}
+          >
+            <AlertDialogContent
+              onOpenAutoFocus={(e) => e.preventDefault()}
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir fornecedor?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Isso fará uma <strong>exclusão lógica</strong>, se configurado no backend. Confirma a remoção de <strong>{deleteRow?.empresa}</strong>?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  disabled={deleting}
+                  onClick={() => {
+                    setDeleteOpen(false)
+                    setDeleteRow(null)
+                    requestAnimationFrame(() => focusRestoreRef.current?.focus())
+                  }}
+                >
+                  Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={deleting}
+                  onClick={async () => {
+                    if (!deleteRow) return
+                    setDeleting(true)
+                    const ok = await handleDelete(deleteRow)
+                    setDeleting(false)
+                    if (ok !== false) {
+                      setDeleteOpen(false)
+                      setDeleteRow(null)
+                      requestAnimationFrame(() => focusRestoreRef.current?.focus())
+                    }
+                  }}
+                >
+                  {deleting ? "Excluindo..." : "Confirmar"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </div>

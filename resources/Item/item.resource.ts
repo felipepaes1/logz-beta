@@ -13,6 +13,19 @@ export class ItemResource extends BaseResource {
         return this.action('create-or-update', {item_dto: itemDto});
     }
 
+    public static async deleteMany(itemIds: Array<number | string>, tenantId?: number | string): Promise<void> {
+        if (!itemIds?.length) return;
+
+        const base = tenantId
+          ? (this.jsonApiType as string).replace(':tenant_id', String(tenantId))
+          : (new (this as any)() as BaseResource).getJsonApiType();
+
+        const idsCsv = itemIds.join(',');
+        const uri = `${base}/${idsCsv}`; 
+
+        await this.getHttpClient().delete(uri);
+    }
+
     public static async dismarkAsPreOrdered(itemIds: Array<number | string>): Promise<any> {
         return this.action('dismark-as-pre-ordered', { item_ids: itemIds });
     }

@@ -43,34 +43,9 @@ export default function Page() {
 
   const columns = React.useMemo<ColumnDef<CentroCusto>[]>(
     () => [
-      {
-        id: "select",
-        header: ({ table }) => (
-          <div className="flex items-center justify-center">
-            <Checkbox
-              checked={
-                table.getIsAllPageRowsSelected() ||
-                (table.getIsSomePageRowsSelected() && "indeterminate")
-              }
-              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-              aria-label="Select all"
-            />
-          </div>
-        ),
-        cell: ({ row }) => (
-          <div className="flex items-center justify-center">
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="Select row"
-            />
-          </div>
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
       { accessorKey: "descricao", header: "Nome" },
       { accessorKey: "modelo", header: "Modelo"},
+      { accessorKey: "codigo", header: "Código" },
       {
         accessorKey: "status",
         header: "Status",
@@ -87,7 +62,6 @@ export default function Page() {
           </Badge>
         ),
       },
-      { accessorKey: "codigo", header: "Código" },
       {
         id: "actions",
         cell: ({ row }) => (

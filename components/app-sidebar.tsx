@@ -25,13 +25,9 @@ import {
 import Image from "next/image"
 import logoDark from "@/assets/logo-logz-dark.svg"
 import logoLight from "@/assets/logo-logz-light.svg"
+import { useAuthUser } from "@/hooks/use-auth-user"
 
 export const sidebarData = {
-  user: {
-    name: "felipe.paes",
-    email: "felippe@logztech.com.br",
-    avatar: "",
-  },
   navMain: [
     {
       title: "Panorama geral",
@@ -67,6 +63,14 @@ export const sidebarData = {
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  
+  const fallbackUser = {
+    name: "Usuário",
+    email: "usuario@email.com",
+    avatar: "",
+  }
+
+  const resolvedUser = useAuthUser(fallbackUser)
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -103,7 +107,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavMain items={sidebarData.navMain} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={sidebarData.user} />
+        <NavUser user={resolvedUser} />
       </SidebarFooter>
     </Sidebar>
   )

@@ -5,7 +5,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
@@ -45,10 +44,6 @@ export function RowActions({ row, onDelete, onSave }: RowActionsProps) {
             }}
           >
             Editar
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={() => onDelete(row.id)}>
-            Excluir
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

@@ -15,19 +15,21 @@ import type { Fornecedor } from "./types"
 import { FornecedorForm } from "./form"
 import { ProviderDto } from "@/resources/Provider/provider.dto"
 import { ProviderResource } from "@/resources/Provider/provider.resource"
+import { toast } from "sonner"
 
 interface RowActionsProps {
   row: Fornecedor
-    onDelete: (id: number) => void
+    onRequestDelete: (row: Fornecedor) => void
     onSave: (dto: ProviderDto) => void
 }
 
-export function RowActions({ row, onDelete, onSave }: RowActionsProps) {
+export function RowActions({ row, onRequestDelete, onSave }: RowActionsProps) {
   const [open, setOpen] = React.useState(false)
+  const [menuOpen, setMenuOpen] = React.useState(false)
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
@@ -47,7 +49,13 @@ export function RowActions({ row, onDelete, onSave }: RowActionsProps) {
             Editar
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={() => onDelete(row.id)}>
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onSelect={() => {
+              setMenuOpen(false)
+              setTimeout(() => onRequestDelete(row), 0)
+            }}
+          >
             Excluir
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -59,9 +67,16 @@ export function RowActions({ row, onDelete, onSave }: RowActionsProps) {
           resource={row.resource}
           onRequestClose={() => setOpen(false)}
           onSubmit={(dto) => {
-            ProviderResource.createOrUpdate(dto.clone().bindToSave())
-            onSave(dto)
-            setOpen(false)
+            const p = ProviderResource.createOrUpdate(dto.clone().bindToSave())
+            toast.promise(p, {
+              loading: "Salvando fornecedor...",
+              success: "Fornecedor atualizado!",
+              error: "Erro ao salvar fornecedor.",
+            })
+            return p.then(() => {
+              onSave(dto)
+              setOpen(false)
+            })
           }}
         />
       </Drawer>

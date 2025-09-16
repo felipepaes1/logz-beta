@@ -14,6 +14,10 @@ export class ComponentResource extends BaseResource {
         return this.action('create-or-update', {component_dto: componentDto});
     }
 
+    public static deleteWithJustification(id: number, justification: string): Promise<any> {
+        return this.action("delete-with-justification", { id, justification })
+    }
+
     public collaborator(): ToOneRelation {
         return this.hasOne(CollaboratorResource, 'collaborator');
     }

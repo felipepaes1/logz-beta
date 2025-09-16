@@ -5,7 +5,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
@@ -18,11 +17,10 @@ import { ColaboradorForm } from "./form"
 
 interface RowActionsProps {
   row: Colaborador
-  onDelete: (id: number) => void
   onSave: (dto: CollaboratorDto) => void
 }
 
-export function RowActions({ row, onDelete, onSave }: RowActionsProps) {
+export function RowActions({ row, onSave }: RowActionsProps) {
   const [open, setOpen] = React.useState(false)
 
   return (
@@ -45,10 +43,6 @@ export function RowActions({ row, onDelete, onSave }: RowActionsProps) {
             }}
           >
             Editar
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={() => onDelete(row.id)}>
-            Excluir
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

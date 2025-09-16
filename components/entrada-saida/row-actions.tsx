@@ -21,10 +21,11 @@ import { PcpResource } from "@/resources/Pcp/pcp.resource"
 import type { Movimento } from "./types"
 import { EntradaForm } from "./form-entrada"
 import { SaidaForm } from "./form-saida"
+import { toast } from "sonner"
 
 export function RowActions({
   row,
-  onDelete,
+  onRequestDelete,
   onSave,
   itemGroups,
   items,
@@ -33,7 +34,7 @@ export function RowActions({
   pcps,
 }: {
   row: Movimento
-  onDelete: (id: number) => void
+  onRequestDelete?: (row: Movimento) => void
   onSave: (dto: ComponentDto) => void
   itemGroups: ItemGroupResource[]
   items: ItemResource[]
@@ -42,11 +43,16 @@ export function RowActions({
   pcps: PcpResource[]
 }) {
   const [open, setOpen] = React.useState(false)
+  const [menuOpen, setMenuOpen] = React.useState(false)
   const Form = row.operacao === "Entrada" ? EntradaForm : SaidaForm
+  const handleDeleteClick = React.useCallback(() => {
+    if (typeof onRequestDelete === "function") return onRequestDelete(row)
+    toast.error("Ação de exclusão indisponível nesta linha.")
+  }, [onRequestDelete, row])
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
@@ -66,7 +72,13 @@ export function RowActions({
             Editar
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={() => onDelete(row.id)}>
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onSelect={() => {
+              setMenuOpen(false)
+              setTimeout(() => handleDeleteClick(), 0)
+            }}
+          >
             Excluir
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -83,9 +95,16 @@ export function RowActions({
           disableEdition
           onRequestClose={() => setOpen(false)}
           onSubmit={(dto) => {
-            ComponentResource.createOrUpdate(dto.clone().bindToSave())
-            onSave(dto)
-            setOpen(false)
+            const p = ComponentResource.createOrUpdate(dto.clone().bindToSave())
+            toast.promise(p, {
+              loading: "Salvando registro...",
+              success: "Registro atualizado!",
+              error: "Erro ao salvar registro.",
+            })
+            return p.then(() => {
+              onSave(dto)
+              setOpen(false)
+            })
           }}
         />
       </Drawer>

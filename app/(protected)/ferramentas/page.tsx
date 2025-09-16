@@ -1,12 +1,14 @@
 "use client"
+
+import * as React from "react"
+
 import Image from "next/image"
+import { IconAlertCircle } from "@tabler/icons-react"
 import WarningCircleUrl from "@/assets/icons-figma/WarningCircle.svg"
 import { DataTable } from "@/components/data-table"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import * as React from "react"
 import { ItemResource } from "@/resources/Item/item.resource"
 import { ManufacturerResource } from "@/resources/Manufacturer/manufacturer.resource"
 import { ItemGroupResource } from "@/resources/ItemGroup/item-group.resource"
@@ -37,6 +39,15 @@ export default function Page() {
   const [itemGroups, setItemGroups] = React.useState<ItemGroupResource[]>([])
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [pendingRow, setPendingRow] = React.useState<Ferramenta | null>(null)
+  const [deleteOpen, setDeleteOpen] = React.useState(false)
+  const [deleting, setDeleting] = React.useState(false)
+  const [deleteRow, setDeleteRow] = React.useState<Ferramenta | null>(null)
+  const focusRestoreRef = React.useRef<HTMLButtonElement>(null)
+
+  const requestDelete = React.useCallback((row: Ferramenta) => {
+    setDeleteRow(row)
+    setDeleteOpen(true)
+  }, [])
 
 
   React.useEffect(() => {
@@ -136,36 +147,21 @@ export default function Page() {
     setConfirmOpen(true)
   }, [])
 
+  const handleDelete = React.useCallback(async (id: number) => {
+    try {
+      await ItemResource.deleteMany([id])
+      setRows(prev => prev.filter(r => r.id !== id))
+      toast.success("Item excluído!")
+    } catch (e: any) {
+      toast.error(e?.message ?? "Falha ao excluir o item.")
+      return false
+    }
+    return true
+  }, [])
+
   const columns = React.useMemo<ColumnDef<Ferramenta>[]>(
     () => {
       const cols: ColumnDef<Ferramenta>[] = [
-
-      {
-        id: "select",
-        header: ({ table }) => (
-          <div className="flex items-center justify-center">
-            <Checkbox
-              checked={
-                table.getIsAllPageRowsSelected() ||
-                (table.getIsSomePageRowsSelected() && "indeterminate")
-              }
-              onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-              aria-label="Select all"
-            />
-          </div>
-        ),
-        cell: ({ row }) => (
-          <div className="flex items-center justify-center">
-            <Checkbox
-              checked={row.getIsSelected()}
-              onCheckedChange={(value) => row.toggleSelected(!!value)}
-              aria-label="Select row"
-            />
-          </div>
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      },
       { accessorKey: "nome", header: "Nome" },
       { accessorKey: "codigo", header: "Código" },
       ...(tab === "alertas" ? [] : [{ accessorKey: "grupo", header: "Grupo" }] as ColumnDef<Ferramenta>[]),
@@ -272,7 +268,7 @@ export default function Page() {
         cell: ({ row }) => (
           <RowActions
             row={row.original}
-            onDelete={(id) => setRows((prev) => prev.filter((r) => r.id !== id))}
+            onRequestDelete={requestDelete}
             onSave={(dto) =>
               setRows((prev) =>
                 prev.map((r) =>
@@ -309,9 +305,14 @@ export default function Page() {
       },
       ]
       return cols
-    },
-    [tab, setRows, manufacturers, itemGroups, handleTogglePreOrder]
-  )
+    }, [
+    tab,
+    manufacturers,
+    itemGroups,
+    handleTogglePreOrder,
+    requestConfirmPreOrder,
+    requestDelete
+  ])
 
   const form = (
   <FerramentaForm
@@ -353,6 +354,12 @@ export default function Page() {
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+          <button
+            ref={focusRestoreRef}
+            tabIndex={-1}
+            aria-hidden
+            className="sr-only"
+          />
           {/* container centralizado e com largura limitada */}
           <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
             <TabsList
@@ -377,12 +384,16 @@ export default function Page() {
                   transition-colors
                 "
               >
+                <div className="flex items-center gap-2">
                 <span className="truncate">ITENS EM ALERTA</span>
+                  <IconAlertCircle className="text-red-500 dark:text-red-500/70" size={30} />
+                </div>
                 <Badge
                   className="
                     ml-3
                     group-data-[state=active]:bg-primary
                     group-data-[state=active]:text-primary-foreground
+                    dark:text-white
                   "
                 >
                   {alertRows.length}
@@ -421,12 +432,11 @@ export default function Page() {
               <DataTable
                 key="alertas"
                 data={alertRows}
-                onDataChange={setRows}
                 columns={columns}
                 addButtonLabel="Nova Ferramenta"
                 renderAddForm={form}
                 isLoading={isLoading}
-                emptyMessage="Nenhum item em alerta 🎉"
+                withDragHandle={false}   
               />
             </TabsContent>
 
@@ -439,9 +449,58 @@ export default function Page() {
                 addButtonLabel="Nova Ferramenta"
                 renderAddForm={form}
                 isLoading={isLoading}
+                withDragHandle  
               />
             </TabsContent>
+
           </Tabs>
+          <AlertDialog
+            open={deleteOpen}
+            onOpenChange={(open) => {
+              setDeleteOpen(open)
+              if (!open) setDeleteRow(null)
+            }}
+          >
+            <AlertDialogContent
+              onOpenAutoFocus={(e) => e.preventDefault()}
+              onCloseAutoFocus={(e) => e.preventDefault()}
+            >
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir ferramenta?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Isso fará a <strong>exclusão lógica</strong>. As movimentações de estoque permanecem.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel
+                  disabled={deleting}
+                  onClick={() => {
+                    setDeleteOpen(false)
+                    setDeleteRow(null)
+                    requestAnimationFrame(() => focusRestoreRef.current?.focus())
+                  }}
+                >
+                  Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={deleting}
+                  onClick={async () => {
+                    if (!deleteRow) return
+                    setDeleting(true)
+                    const ok = await handleDelete(deleteRow.id)
+                    setDeleting(false)
+                    if (ok !== false) {
+                      setDeleteOpen(false)
+                      setDeleteRow(null)
+                      requestAnimationFrame(() => focusRestoreRef.current?.focus())
+                    }
+                  }}
+                >
+                  {deleting ? "Excluindo..." : "Confirmar"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
             <AlertDialogContent>
               <AlertDialogHeader className="flex flex-col items-center text-center gap-2">

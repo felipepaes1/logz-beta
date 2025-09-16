@@ -17,21 +17,23 @@ import { ManufacturerResource } from "@/resources/Manufacturer/manufacturer.reso
 import { ItemGroupResource } from "@/resources/ItemGroup/item-group.resource"
 import type { Ferramenta } from "./types"
 import { FerramentaForm } from "./form"
+import { toast } from "sonner"
 
 interface RowActionsProps {
   row: Ferramenta
-  onDelete: (id: number) => void
+  onRequestDelete: (row: Ferramenta) => void
   onSave: (dto: ItemDto) => void
   manufacturers: ManufacturerResource[]
   itemGroups: ItemGroupResource[]
 }
 
-export function RowActions({ row, onDelete, onSave, manufacturers, itemGroups }: RowActionsProps) {
+export function RowActions({ row, onRequestDelete, onSave, manufacturers, itemGroups }: RowActionsProps) {
   const [open, setOpen] = React.useState(false)
-
+  const [menuOpen, setMenuOpen] = React.useState(false)
+  
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
@@ -51,7 +53,13 @@ export function RowActions({ row, onDelete, onSave, manufacturers, itemGroups }:
             Editar
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem variant="destructive" onClick={() => onDelete(row.id)}>
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onSelect={() => {
+              setMenuOpen(false)
+              setTimeout(() => onRequestDelete(row), 0)
+            }}
+          >
             Excluir
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -63,9 +71,14 @@ export function RowActions({ row, onDelete, onSave, manufacturers, itemGroups }:
           manufacturers={manufacturers}
           itemGroups={itemGroups}
           onRequestClose={() => setOpen(false)}
-          onSubmit={(dto) => {
-            ItemResource.createOrUpdate(dto.clone().bindToSave())
-            onSave(dto)
+          onSubmit={async (dto) => {
+            const p = ItemResource.createOrUpdate(dto.clone().bindToSave())
+            await toast.promise(p, {
+              loading: "Salvando ferramenta...",
+              success: "Ferramenta atualizada!",
+              error: "Erro ao salvar.",
+            })
+            onSave(dto) 
             setOpen(false)
           }}
         />
