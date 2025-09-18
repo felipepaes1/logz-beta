@@ -314,41 +314,40 @@ export default function Page() {
     requestDelete
   ])
 
-  const form = (
-  <FerramentaForm
-    title="Nova Ferramenta"
-    manufacturers={manufacturers}
-    itemGroups={itemGroups}
-    onSubmit={(dto) => {
-      const p = ItemResource.createOrUpdate(dto.clone().bindToSave())
-      toast.promise(p, {
-        loading: "Salvando ferramenta...",
-        success: "Ferramenta cadastrada!",
-        error: "Erro ao salvar ferramenta.",
-      })
-      return p.then(() =>
-        setRows(prev => [
-          ...prev,
-          {
-            id: prev.length + 1,
-            nome: dto.name,
-            codigo: dto.code,
-            grupo: dto.itemGroupResource?.getAttribute("description") || "",
-            fabricante:
-              dto.manufacturerResource?.getAttribute("description") || "",
-            estoqueMinimo: dto.min_quantity,
-            estoqueAtual: dto.quantity,
-            fornecedor: "",
-            status: dto.active ? "Ativo" : "Inativo",
-            resource: new ItemResource(),
-            manufacturer: dto.manufacturerResource,
-            itemGroup: dto.itemGroupResource,
-          },
-        ])
-      )
-    }}
-  />
-)
+  const form = React.useMemo(() => (
+    <FerramentaForm
+      title="Nova Ferramenta"
+      manufacturers={manufacturers}
+      itemGroups={itemGroups}
+      onSubmit={(dto) => {
+        const p = ItemResource.createOrUpdate(dto.clone().bindToSave())
+        toast.promise(p, {
+          loading: "Salvando ferramenta...",
+          success: "Ferramenta cadastrada!",
+          error: "Erro ao salvar ferramenta.",
+        })
+        return p.then(() =>
+          setRows(prev => [
+            ...prev,
+            {
+              id: prev.length + 1,
+              nome: dto.name,
+              codigo: dto.code,
+              grupo: dto.itemGroupResource?.getAttribute("description") || "",
+              fabricante: dto.manufacturerResource?.getAttribute("description") || "",
+              estoqueMinimo: dto.min_quantity,
+              estoqueAtual: dto.quantity,
+              fornecedor: "",
+              status: dto.active ? "Ativo" : "Inativo",
+              resource: new ItemResource(),
+              manufacturer: dto.manufacturerResource,
+              itemGroup: dto.itemGroupResource,
+            },
+          ])
+        )
+      }}
+    />
+  ), [manufacturers, itemGroups, setRows])
 
   return (
     <div className="flex flex-1 flex-col">
@@ -421,6 +420,7 @@ export default function Page() {
                     ml-3
                     group-data-[state=active]:bg-primary
                     group-data-[state=active]:text-primary-foreground
+                    dark:text-white
                   "
                 >
                   {todosRows.length}

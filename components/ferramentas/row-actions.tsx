@@ -65,13 +65,14 @@ export function RowActions({ row, onRequestDelete, onSave, manufacturers, itemGr
         </DropdownMenuContent>
       </DropdownMenu>
       <Drawer open={open} onOpenChange={setOpen} direction="right">
-        <FerramentaForm
-          title="Editar Ferramenta"
-          resource={row.resource}
-          manufacturers={manufacturers}
-          itemGroups={itemGroups}
-          onRequestClose={() => setOpen(false)}
-          onSubmit={async (dto) => {
+        {open ? (
+          <FerramentaForm
+            title="Editar Ferramenta"
+            resource={row.resource}
+            manufacturers={manufacturers}
+            itemGroups={itemGroups}
+            onRequestClose={() => setOpen(false)}    
+            onSubmit={async (dto) => {
             const p = ItemResource.createOrUpdate(dto.clone().bindToSave())
             await toast.promise(p, {
               loading: "Salvando ferramenta...",
@@ -82,6 +83,7 @@ export function RowActions({ row, onRequestDelete, onSave, manufacturers, itemGr
             setOpen(false)
           }}
         />
+        ) : null}
       </Drawer>
     </>
   )

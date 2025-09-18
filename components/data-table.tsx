@@ -158,6 +158,19 @@ export function DataTable<T extends { id: number }>({
   const [addOpen, setAddOpen] = React.useState(false)
   const addFocusRestoreRef = React.useRef<HTMLButtonElement>(null)
 
+  const renderAddFormWithClose = React.useMemo(() => {
+    if (!renderAddForm) return null
+    if (React.isValidElement(renderAddForm)) {
+      return React.cloneElement(renderAddForm, {
+        onRequestClose: () => {
+          setAddOpen(false)
+          requestAnimationFrame(() => addFocusRestoreRef.current?.focus())
+        },
+      } as any)
+    }
+    return renderAddForm
+  }, [renderAddForm])
+
   const dataIds = React.useMemo<UniqueIdentifier[]>(
     () => data?.map(({ id }) => id) || [],
     [data]
@@ -216,7 +229,7 @@ export function DataTable<T extends { id: number }>({
                     <Button size="sm" variant="outline">{addButtonLabel}</Button>
                   </DrawerTrigger>
                   {/* renderiza o form exatamente como foi passado */}
-                  {renderAddForm}
+                  {addOpen ? renderAddFormWithClose : null}
                 </Drawer>
               </>
             ) : null

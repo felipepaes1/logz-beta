@@ -2,10 +2,8 @@ import { ItemGroupResource } from "./item-group.resource";
 import { BaseDTO } from "../../base/Base.dto";
 
 export class ItemGroupDto extends BaseDTO {
-    public id?: string;
-    public name: string;
+    public id?: number | null;
     public description: string;
-    public code: string;
     public itemGroupResource: ItemGroupResource;
 
     public createFromColoquentResource(resource: ItemGroupResource): ItemGroupDto {
@@ -14,8 +12,11 @@ export class ItemGroupDto extends BaseDTO {
             return this
         }
 
-        this.id = resource?.getApiId();
-        this.description = resource?.getAttribute('description');
+        const rawId = resource?.getApiId?.();
+        const parsedId = rawId !== undefined && rawId !== null ? Number(rawId) : null;
+        this.id = Number.isFinite(parsedId as number) ? (parsedId as number) : null;
+        this.description = resource?.getAttribute('description') ?? this.description;
+        this.itemGroupResource = resource;
 
         return this;
     }
@@ -27,6 +28,9 @@ export class ItemGroupDto extends BaseDTO {
     }
 
     public bindToSave(): ItemGroupDto {
+        if (this.id !== null && this.id !== undefined && !Number.isFinite(this.id)) {
+            this.id = null;
+        }
         return this;
     }
 }

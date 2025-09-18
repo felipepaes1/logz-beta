@@ -56,31 +56,27 @@ export function EntradaForm({
     "collaborator"
   ) as CollaboratorResource | undefined
 
-  const [group, setGroup] = React.useState(
-    groupRelation?.getApiId() ? String(groupRelation.getApiId()) : ""
-  )
-  const [item, setItem] = React.useState(
-    itemRelation?.getApiId() ? String(itemRelation.getApiId()) : ""
-  )
-  const [collaborator, setCollaborator] = React.useState(
-    collaboratorRelation?.getApiId() ? String(collaboratorRelation.getApiId()) : ""
-  )
+  const [group, setGroup] = React.useState<string>(groupRelation?.getApiId()?.toString() ?? "")
+  const [item, setItem] = React.useState<string>(itemRelation?.getApiId()?.toString() ?? "")
+  const [collaborator, setCollaborator] = React.useState<string>(collaboratorRelation?.getApiId()?.toString() ?? "")
   const unitInputRef = React.useRef<HTMLInputElement>(null)
-  const [unitPriceCents, setUnitPriceCents] = React.useState<number>(() => {
-    const up = Number(resource?.getAttribute("unit_price") ?? 0)
-    return Math.max(0, Math.round(up * 100))
-  })
-  const [quantity, setQuantity] = React.useState<string>(
-    String(resource?.getAttribute("quantity") ?? 0)
-  )
+  const [unitPriceCents, setUnitPriceCents] = React.useState<number>(0)
+  const [quantity, setQuantity] = React.useState<string>("0")
+  const [order, setOrder] = React.useState<string>("")
+
+  React.useEffect(() => {
+    const up = Number(resource?.getAttribute?.("unit_price") ?? 0)
+    setUnitPriceCents(Math.max(0, Math.round(up * 100)))
+    setQuantity(String(resource?.getAttribute?.("quantity") ?? 0))
+    setGroup(groupRelation?.getApiId()?.toString() ?? "")
+    setItem(itemRelation?.getApiId()?.toString() ?? "")
+    setCollaborator(collaboratorRelation?.getApiId()?.toString() ?? "")
+    setOrder(resource?.getRelation?.("order")?.getApiId()?.toString() ?? "")
+  }, [resource])
 
   const quantityNumber = React.useMemo(
     () => Number(quantity) || 0,
     [quantity]
-  )
-
-  const [order, setOrder] = React.useState(
-    resource?.getRelation("order")?.getApiId() ? String(resource?.getRelation("order")?.getApiId()) : ""
   )
 
   const [submitting, setSubmitting] = React.useState(false)

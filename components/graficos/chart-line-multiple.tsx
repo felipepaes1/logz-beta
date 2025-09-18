@@ -2,7 +2,7 @@
 
 import React from "react"
 
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts"
+import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from "recharts"
 
 import {
   Card,
@@ -96,6 +96,38 @@ export function ChartLineMultiple() {
     fetchData(yearParams)
   }, [fetchData, yearParams])
 
+  const CustomTooltip = React.useCallback(
+  ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null
+    return (
+      <div className="rounded-md border bg-popover/95 p-3 text-xs shadow-md backdrop-blur-sm dark:bg-popover/80">
+        <div className="mb-2 font-medium">{label}</div>
+        <div className="space-y-3">
+          {payload.map((item: any) => (
+            <div
+              key={item.dataKey}
+              className="flex items-center gap-x-4"
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="inline-block size-2 rounded-full"
+                  style={{ background: item.color }}
+                />
+                <span>{item.name ?? item.dataKey}</span>
+              </div>
+              <span className="tabular-nums font-semibold ml-auto">
+                {formatBRL(Number(item.value))}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  },
+  []
+)
+
   return (
     <Card>
       <CardHeader className="gap-1">
@@ -129,13 +161,11 @@ export function ChartLineMultiple() {
               tickFormatter={(v) => formatBRL(Number(v))}
             />
 
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent valueFormatter={(v) => formatBRL(Number(v))} />}
-            />
+            <Tooltip cursor={false} content={<CustomTooltip />} />
 
             <Line
               dataKey="Consumido"
+              name="Consumido"
               type="monotone"
               stroke="var(--color-Consumido)"
               strokeWidth={2}
@@ -144,6 +174,7 @@ export function ChartLineMultiple() {
             />
             <Line
               dataKey="Comprado"
+              name="Comprado"
               type="monotone"
               stroke="var(--color-Comprado)"
               strokeWidth={2}

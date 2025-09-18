@@ -136,7 +136,7 @@ export function ColaboradorForm({ onSubmit, resource, title, onRequestClose }: P
             />
           </div>
           <DrawerFooter>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="dark:text-white">
               {submitting ? "Salvando..." : "Salvar"}
             </Button>
             <DrawerClose asChild>

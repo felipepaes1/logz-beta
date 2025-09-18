@@ -66,19 +66,12 @@ export function SaidaForm({
   ) as MachineResource | undefined
   const pcpRelation = resource?.getRelation("pcp") as PcpResource | undefined
 
-  const [group, setGroup] = React.useState(groupRelation?.getApiId()?.toString() ?? "")
-  const [item, setItem] = React.useState(itemRelation?.getApiId()?.toString() ?? "")
-  const [collaborator, setCollaborator] = React.useState(
-    collaboratorRelation?.getApiId()?.toString() ?? ""
-  )
-  const [machine, setMachine] = React.useState(
-    machineRelation?.getApiId()?.toString() ?? ""
-  )
-  const [pcp, setPcp] = React.useState(pcpRelation?.getApiId()?.toString() ?? "")
-
-  const [quantity, setQuantity] = React.useState<string>(
-    String(resource?.getAttribute("quantity") ?? 0)
-  )
+  const [group, setGroup] = React.useState<string>("")
+  const [item, setItem] = React.useState<string>("")
+  const [collaborator, setCollaborator] = React.useState<string>("")
+  const [machine, setMachine] = React.useState<string>("")
+  const [pcp, setPcp] = React.useState<string>("")
+  const [quantity, setQuantity] = React.useState<string>("0")
   const quantityNumber = React.useMemo(() => Number(quantity) || 0, [quantity])
 
   const [submitting, setSubmitting] = React.useState(false)
@@ -116,6 +109,15 @@ export function SaidaForm({
       }),
     [items, group]
   )
+
+  React.useEffect(() => {
+    setGroup(groupRelation?.getApiId()?.toString() ?? "")
+    setItem(itemRelation?.getApiId()?.toString() ?? "")
+    setCollaborator(collaboratorRelation?.getApiId()?.toString() ?? "")
+    setMachine(machineRelation?.getApiId()?.toString() ?? "")
+    setPcp(pcpRelation?.getApiId()?.toString() ?? "")
+    setQuantity(String(resource?.getAttribute?.("quantity") ?? 0))
+  }, [resource])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -346,7 +348,7 @@ export function SaidaForm({
           </div>
 
           <DrawerFooter>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="dark:text-white">
               {submitting ? "Salvando..." : "Salvar"}
             </Button>
             <DrawerClose asChild>

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+
 import {
   DrawerContent,
   DrawerHeader,
@@ -107,15 +108,11 @@ export function FornecedorForm({ onSubmit, initialValues, resource, title, onReq
             try {
               setSubmitting(true)
               await onSubmit(dto)
-              toast.success("Fornecedor salvo com sucesso.")
               form.reset()
               setPhone("")
               onRequestClose?.()
             } catch (error) {
-              const message =
-                (error as { message?: string })?.message ??
-                "Falha ao salvar fornecedor."
-              toast.error(message) // sonner
+              throw error
             } finally {
               setSubmitting(false)
             }
@@ -178,7 +175,7 @@ export function FornecedorForm({ onSubmit, initialValues, resource, title, onReq
             <Textarea id="observacoes" name="observacoes" defaultValue={initialValues?.observacoes} />
           </div>
           <DrawerFooter>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="dark:text-white">
               {submitting ? "Salvando..." : "Salvar"}
             </Button>
             <DrawerClose asChild>

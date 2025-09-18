@@ -13,14 +13,11 @@ import { Drawer } from "@/components/ui/drawer"
 import { IconDotsVertical } from "@tabler/icons-react"
 import type { Fornecedor } from "./types"
 import { FornecedorForm } from "./form"
-import { ProviderDto } from "@/resources/Provider/provider.dto"
-import { ProviderResource } from "@/resources/Provider/provider.resource"
-import { toast } from "sonner"
 
 interface RowActionsProps {
   row: Fornecedor
     onRequestDelete: (row: Fornecedor) => void
-    onSave: (dto: ProviderDto) => void
+    onSave: (dto: any) => void
 }
 
 export function RowActions({ row, onRequestDelete, onSave }: RowActionsProps) {
@@ -61,24 +58,18 @@ export function RowActions({ row, onRequestDelete, onSave }: RowActionsProps) {
         </DropdownMenuContent>
       </DropdownMenu>
       <Drawer open={open} onOpenChange={setOpen} direction="right">
-        <FornecedorForm
+        {open ? (
+          <FornecedorForm
           title="Editar Fornecedor"
           initialValues={row}
           resource={row.resource}
           onRequestClose={() => setOpen(false)}
-          onSubmit={(dto) => {
-            const p = ProviderResource.createOrUpdate(dto.clone().bindToSave())
-            toast.promise(p, {
-              loading: "Salvando fornecedor...",
-              success: "Fornecedor atualizado!",
-              error: "Erro ao salvar fornecedor.",
-            })
-            return p.then(() => {
-              onSave(dto)
-              setOpen(false)
-            })
+          onSubmit={async (dto) => {
+            await onSave(dto)   
+            setOpen(false)
           }}
         />
+        ) : null}
       </Drawer>
     </>
   )

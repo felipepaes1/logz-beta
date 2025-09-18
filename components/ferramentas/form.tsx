@@ -36,6 +36,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import { ProviderResource } from "@/resources/Provider/provider.resource"
+import { ProviderDto } from "@/resources/Provider/provider.dto"
 
 interface FerramentaFormProps {
   onSubmit: (dto: ItemDto) => Promise<unknown>
@@ -66,15 +68,49 @@ export function FerramentaForm({
   const [submitting, setSubmitting] = React.useState(false)
   const [groups, setGroups] = React.useState<ItemGroupResource[]>(itemGroups)
   React.useEffect(() => setGroups(itemGroups), [itemGroups])
+  const wantSelectGroupIdRef = React.useRef<string | null>(null)
   const [newGroupOpen, setNewGroupOpen] = React.useState(false)
   const [newGroupName, setNewGroupName] = React.useState("")
   const [creatingGroup, setCreatingGroup] = React.useState(false)
+  const loadingGroupsRef = React.useRef(false)
+  const [providers, setProviders] = React.useState<ProviderResource[]>([])
+  const [providerId, setProviderId] = React.useState<string>(
+    resource?.getRelation?.("provider")?.getApiId?.()?.toString?.() ??
+    resource?.getAttribute?.("provider_id")?.toString?.() ??
+    ""
+  )
   const [errors, setErrors] = React.useState<{
     nome?: string
     codigo?: string
     itemGroup?: string
     manufacturer?: string
   }>({})
+
+  React.useEffect(() => {
+    const wanted = wantSelectGroupIdRef.current
+    if (!wanted) return
+    const found = groups.some((g) => {
+      const rawId = g.getApiId?.() ?? g.getAttribute?.("id")
+      return String(rawId ?? "") === wanted
+    })
+    if (found) {
+      setItemGroupId(wanted)
+      wantSelectGroupIdRef.current = null
+    }
+  }, [groups])
+
+  React.useEffect(() => {
+    let mounted = true
+    ProviderResource
+      .get()
+      .then((resp: any) => {
+        if (!mounted) return
+        const data = resp?.getData?.() ?? resp?.data ?? []
+        setProviders(data)
+      })
+      .catch(() => {/* opcional: toast.error("Não foi possível carregar fornecedores") */})
+    return () => { mounted = false }
+  }, [])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -86,9 +122,8 @@ export function FerramentaForm({
     const manufacturerRsc = manufacturers.find(
       (m) => m.getApiId()?.toString() === manufacturerId
     )
-    const itemGroupRsc = groups.find(
-      (g) => g.getApiId()?.toString() === itemGroupId
-    )
+    const itemGroupRsc = groups.find((g) => g.getApiId()?.toString() === itemGroupId)
+    const providerRsc = providers.find((p) => p.getApiId()?.toString() === providerId)
 
     const newErrors: typeof errors = {}
     if (!nome) newErrors.nome = "Campo obrigatório"
@@ -112,12 +147,21 @@ export function FerramentaForm({
     dto.quantity = 0
     dto.manufacturerResource = manufacturerRsc
     dto.itemGroupResource = itemGroupRsc
+    if (providerRsc) {
+      const supplierName =
+        providerRsc.getAttribute?.("company_name") ??
+        providerRsc.getAttribute?.("name") ??
+        ""
+      ;(dto as any).supplier = supplierName
+      ;(dto as any).provider_id = Number(providerRsc.getApiId?.() ?? NaN) || undefined
+    }
 
     try {
       setSubmitting(true)
       await onSubmit(dto)
       form.reset()
       setActive(true)
+      setProviderId("")
       onRequestClose?.()
     } finally {
       setSubmitting(false)
@@ -172,7 +216,7 @@ export function FerramentaForm({
           {/* Grupo */}
           <div className="flex flex-col gap-3">
             <Label>Grupo</Label>
-            <Select value={itemGroupId} onValueChange={setItemGroupId}>
+            <Select value={itemGroupId || undefined} onValueChange={setItemGroupId}>
               <SelectTrigger
                 className={cn(errors.itemGroup && "border-destructive")}
               >
@@ -180,21 +224,10 @@ export function FerramentaForm({
               </SelectTrigger>
               <SelectContent>
                 {groups.map((g, idx) => {
-                  const rawId =
-                    g.getApiId?.() ??
-                    g.getAttribute?.("id") ??
-                    null
-                  const safeId = String(rawId ?? `tmp-${idx}-${g.getAttribute?.("description") ?? "sem-desc"}`)
-
-                  const label =
-                    g.getAttribute?.("description") ??
-                    `Grupo ${idx + 1}`
-
-                  return (
-                    <SelectItem key={safeId} value={safeId}>
-                      {label}
-                    </SelectItem>
-                  )
+                  const rawId = g.getApiId?.() ?? g.getAttribute?.("id") ?? null
+                  const safeId = String(rawId ?? `tmp-${idx}`)
+                  const label = g.getAttribute?.("description") ?? `Grupo ${idx + 1}`
+                  return <SelectItem key={safeId} value={safeId}>{label}</SelectItem>
                 })}
               </SelectContent>
             </Select>
@@ -255,12 +288,22 @@ export function FerramentaForm({
 
           {/* Fornecedor */}
           <div className="flex flex-col gap-3">
-            <Label htmlFor="fornecedor">Fornecedor</Label>
-            <Input
-              id="fornecedor"
-              name="fornecedor"
-              defaultValue={resource?.getAttribute("supplier")}
-            />
+            <Label>Fornecedor</Label>
+            <Select value={providerId} onValueChange={setProviderId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione um fornecedor" />
+              </SelectTrigger>
+              <SelectContent>
+                {providers.map((p) => (
+                  <SelectItem
+                    key={p.getApiId?.() ?? p.getAttribute?.("id")}
+                    value={p.getApiId?.()?.toString?.() ?? ""}
+                  >
+                    {p.getAttribute?.("company_name") ?? p.getAttribute?.("name") ?? "—"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Status */}
@@ -310,23 +353,30 @@ export function FerramentaForm({
                 const dto = new ItemGroupDto()
                 dto.description = name
 
-                const created = await ItemGroupResource.createOrUpdate(
-                  dto
-                )
+                const created = await ItemGroupResource.createOrUpdate(dto)
                 const returnedId =
                   created?.data?.id ??
                   created?.id ??
                   created?.data?.data?.id ??
+                  created?.data?.data?.attributes?.id ??
                   null
 
-                const createdRsc = new ItemGroupResource()
-                
-                const newId = String(returnedId ?? `tmp-${Date.now()}`)
-                createdRsc.setApiId(newId)
-                createdRsc.setAttribute("description", name)
-
-                setGroups((prev) => [...prev, createdRsc])
-                setItemGroupId(newId)
+                const fresh = await ItemGroupResource.get()
+                const freshList = fresh?.getData?.() ?? []
+                if (returnedId != null) {
+                  wantSelectGroupIdRef.current = String(returnedId)
+                } else {
+                  const found = freshList.find((g: ItemGroupResource) =>
+                    (g.getAttribute?.("description") ?? "")
+                      .toString()
+                      .toLowerCase() === name.toLowerCase()
+                  )
+                  if (found) {
+                    const fid = String(found.getApiId?.() ?? found.getAttribute?.("id") ?? "")
+                    wantSelectGroupIdRef.current = fid || null
+                  }
+                }
+                setGroups(freshList)
 
                 toast.success("Grupo criado com sucesso!")
                 setNewGroupName("")

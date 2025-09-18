@@ -37,7 +37,7 @@ export function CentroCustoForm({ onSubmit, resource, title, onRequestClose }: C
 
     const descricao = data.get("descricao")?.toString().trim() || ""
     const codigo    = data.get("codigo")?.toString().trim() || ""
-    const modelo     = data.get("modelo")?.toString().trim() || ""
+    const modelo    = data.get("modelo")?.toString().trim() || ""
 
     const newErrors: typeof errors = {}
     if (!descricao) newErrors.descricao = "Campo obrigatório"
@@ -122,7 +122,7 @@ export function CentroCustoForm({ onSubmit, resource, title, onRequestClose }: C
             <Switch id="status" checked={active} onCheckedChange={setActive} />
           </div>
           <DrawerFooter>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="dark:text-white">
               {submitting ? "Salvando..." : "Salvar"}</Button>
             <DrawerClose asChild>
               <Button variant="outline" type="button" data-close>

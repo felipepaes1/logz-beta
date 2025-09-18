@@ -257,27 +257,31 @@ export default function Page() {
         <DrawerTrigger asChild>
           <Button variant="outline" size="sm">Cadastrar entrada</Button>
         </DrawerTrigger>
-        <EntradaForm
-          itemGroups={itemGroups}
-          items={items}
-          collaborators={collaborators}
-          onSubmit={saveWithToast}
-          onRequestClose={() => setIsEntradaOpen(false)}
-        />
+        {isEntradaOpen ? (
+          <EntradaForm
+            itemGroups={itemGroups}
+            items={items}
+            collaborators={collaborators}
+            onSubmit={saveWithToast}
+            onRequestClose={() => setIsEntradaOpen(false)}
+          />
+        ) : null}
       </Drawer>
       <Drawer direction="right" open={isSaidaOpen} onOpenChange={setIsSaidaOpen}>
         <DrawerTrigger asChild>
           <Button variant="outline" size="sm">Cadastrar Saída</Button>
         </DrawerTrigger>
-        <SaidaForm
-          itemGroups={itemGroups}
-          items={items}
-          collaborators={collaborators}
-          machines={machines}
-          pcps={pcps}
-          onSubmit={saveWithToast}
-          onRequestClose={() => setIsSaidaOpen(false)}
-        />
+        {isSaidaOpen ? (
+          <SaidaForm
+            itemGroups={itemGroups}
+            items={items}
+            collaborators={collaborators}
+            machines={machines}
+            pcps={pcps}
+            onSubmit={saveWithToast}
+            onRequestClose={() => setIsSaidaOpen(false)}
+          />
+        ) : null}
       </Drawer>
     </>
   )
@@ -427,6 +431,7 @@ export default function Page() {
                   Cancelar
                 </AlertDialogCancel>
                 <AlertDialogAction
+                  className="dark:text-white"
                   disabled={deleting || justification.trim().length < JUST_MIN}
                   onClick={async () => {
                     if (!deleteRow) return
