@@ -117,7 +117,7 @@ export default function LoginPage() {
                   height={24}
                   className="h-6 w-6 object-contain text-blue-600"
                 />
-                <h3 className="text-xl font-bold text-black-700 dark:text-white">{s.title}</h3>
+                <h3 className="text-xl font-bold text-black-700 dark:text-black">{s.title}</h3>
                 <p className="text-sm text-gray-600">{s.desc}</p>
               </div>
             </CarouselItem>

@@ -3,7 +3,7 @@
 import React from "react";
 
 import { Bar, BarChart, CartesianGrid, LabelList, XAxis, YAxis } from "recharts";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import { DashboardPanoramaResource } from "@/resources/Dashboard/dashboard.resource";
 
@@ -12,8 +12,13 @@ const chartConfig = {
   label: { color: "var(--background)" },
 } satisfies ChartConfig;
 
-const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
-const fmt = (n: number) => brl.format(n ?? 0);
+const brl = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const fmt = (n: number) => brl.format(Number.isFinite(n) ? n : 0);
 
 const NAME_MAX_CHARS = 30
   const ellipsize = (s: string, max = NAME_MAX_CHARS) =>
@@ -89,7 +94,10 @@ export function ChartBarLabelTopMachines({ tenantId }: Props) {
               domain={[0, 'dataMax']}
               allowDataOverflow={false}
             />
-            <ChartTooltip cursor={false} content={<ChartTooltipContent valueFormatter={(v) => fmt(Number(v))} />} />
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent valueFormatter={(v) => fmt(Number(v))} />}
+            />
             <Bar dataKey="valor" layout="vertical" fill="var(--color-valor)" radius={4}>
               <LabelList dataKey="nome" content={renderToolNameAbove} isAnimationActive={false} />
               <LabelList

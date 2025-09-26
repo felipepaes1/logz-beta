@@ -100,6 +100,16 @@ export function EntradaForm({
   const total = unitPrice * quantityNumber
   const noop = React.useCallback(() => {}, [])
 
+  React.useEffect(() => {
+    if (!group) {
+      setItem("")
+      return
+    }
+    if (item && !items.some(i => i.getApiId()?.toString() === item && (i.getRelation("itemGroup") as ItemGroupResource | undefined)?.getApiId()?.toString() === group)) {
+      setItem("")
+    }
+  }, [group, items]) 
+
   function placeCaretEnd(el: HTMLInputElement | null) {
     if (!el) return
     const len = el.value.length
@@ -112,13 +122,6 @@ export function EntradaForm({
     return reais.replace(".", ",")           
   }
 
-  /**
-   * Regras:
-   * - Apenas dígitos e vírgula (ou ponto, que vira vírgula).
-   * - "247" => 247,00 (usuário digitou só inteiros).
-   * - "247,5" => 247,50 ; "247,57" => 247,57
-   * - Zeros à esquerda removidos do inteiro.
-   */
 
   function handleUnitKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     const key = e.key
@@ -128,7 +131,7 @@ export function EntradaForm({
       const digit = Number(key)
       setUnitPriceCents((prev) => {
         const next = prev * 10 + digit
-        return Math.min(next, 999_999_999_99) // trava ~R$ 9.999.999.999,99
+        return Math.min(next, 999_999_999_99)
       })
       placeCaretEnd(unitInputRef.current)
       return
@@ -256,11 +259,26 @@ export function EntradaForm({
                 <SelectValue placeholder="Selecione uma ferramenta" />
               </SelectTrigger>
               <SelectContent>
-                {filteredItems.map((i) => (
-                  <SelectItem key={i.getApiId()} value={i.getApiId()!.toString()}>
-                    {i.getAttribute("name")}
+                {!group && (
+                  <SelectItem value="__no_group__" disabled>
+                    Selecione um grupo primeiro
                   </SelectItem>
-                ))}
+                )}
+                {group && filteredItems.length === 0 && (
+                  <SelectItem value="__empty_items__" disabled>
+                    NÃO HÁ FERRAMENTAS CADASTRADAS
+                  </SelectItem>
+                )}
+                {group && filteredItems.length > 0 &&
+                  filteredItems.map((i) => (
+                    <SelectItem
+                      key={i.getApiId()}
+                      value={i.getApiId()!.toString()}
+                    >
+                      {i.getAttribute("name")}
+                    </SelectItem>
+                  ))
+                }
               </SelectContent>
             </Select>
             {errors.item && (

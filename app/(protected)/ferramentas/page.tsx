@@ -519,6 +519,7 @@ export default function Page() {
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                 <AlertDialogAction
+                  className="dark: text-white"
                   onClick={() => {
                     if (pendingRow) handleTogglePreOrder(pendingRow, true)
                     setConfirmOpen(false)

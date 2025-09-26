@@ -3,11 +3,8 @@
 import * as React from "react"
 import { DataTable } from "@/components/data-table"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Checkbox } from "@/components/ui/checkbox"
 import { FornecedorForm } from "@/components/fornecedores/form"
 import { RowActions } from "@/components/fornecedores/row-actions"
-import type { Fornecedor } from "@/components/fornecedores/types"
-import type { ColumnDef } from "@tanstack/react-table"
 import { toast } from "sonner"
 import { PluralResponse } from "coloquent"
 import { ProviderResource } from "@/resources/Provider/provider.resource"
@@ -33,6 +30,21 @@ export default function Page() {
   const [deleting, setDeleting] = React.useState(false)
   const [deleteRow, setDeleteRow] = React.useState<Fornecedor | null>(null)
   const focusRestoreRef = React.useRef<HTMLButtonElement>(null)
+
+  function extractSavedId(resp: any): number | undefined {
+    const candidates = [
+      resp?.getApiId?.(),                   
+      resp?.data?.data?.id,                  
+      resp?.data?.id,                      
+      resp?.id,                          
+      resp?.data?.data?.attributes?.id,     
+    ]
+    for (const c of candidates) {
+      const n = Number(c)
+      if (Number.isFinite(n) && n > 0) return n
+    }
+    return undefined
+  }
 
   React.useEffect(() => {
     const tid = localStorage.getItem("@tenancy_id")
@@ -78,15 +90,20 @@ export default function Page() {
   const handleDelete = React.useCallback(async (row: Fornecedor) => {
     const current = row
     if (!current) return false
+    const idNum = Number(current.id)
+    if (!Number.isFinite(idNum) || idNum <= 0) {
+      toast.error("ID inválido para exclusão. Recarregue a página e tente novamente.")
+      return false
+    }
     const prev = rows
-    setRows(p => p.filter(r => r.id !== current.id))
+    setRows(p => p.filter(r => Number(r.id) !== idNum))
     try {
-      await ProviderResource.deleteMany([current.id])
+      await ProviderResource.destroy(idNum)
       toast.success("Fornecedor excluído.")
       return true
-    } catch (e: any) {
+    } catch (err: any) {
       setRows(prev)
-      toast.error(e?.message ?? "Não foi possível excluir o fornecedor.")
+      toast.error(err?.message ?? "Não foi possível excluir o fornecedor.")
       return false
     }
   }, [rows])
@@ -106,14 +123,12 @@ export default function Page() {
             row={row.original}
             onRequestDelete={requestDelete}
             onSave={async (dto: ProviderDto) => {
-              const isNew = !dto.id
-              const optimisticId = isNew
-                ? Math.max(0, ...rows.map(r => r.id)) + 1
-                : Number(dto.id)
-
-              // Monta linha otimista
+              const rowId = Number(row.id)
+              const isNew = !Number.isFinite(rowId) || rowId <= 0
+              const prev = rows
+              const tempId = isNew ? -Date.now() : rowId
               const draft: Fornecedor = {
-                id: optimisticId,
+                id: tempId,
                 empresa: dto.company_name ?? "",
                 vendedor: dto.seller ?? "",
                 email: dto.email ?? "",
@@ -123,23 +138,34 @@ export default function Page() {
                 resource: dto.providerResource,
                 dto,
               }
-
-              const prev = rows
+           
               if (isNew) {
                 setRows(p => [...p, draft])
               } else {
-                setRows(p => p.map(r => (r.id === optimisticId ? draft : r)))
+                setRows(p => p.map(r => (Number(r.id) === rowId ? draft : r)))
               }
 
               try {
-                await ProviderResource.createOrUpdate(dto.bindToSave())
-                // Atualiza id real se veio do backend
-                const savedId = Number(dto.providerResource?.getApiId?.() ?? optimisticId)
-                setRows(p => p.map(r => (r.id === optimisticId ? { ...r, id: savedId } : r)))
+                const savedResource = await ProviderResource.createOrUpdate(dto.bindToSave())
+                let savedId = Number(savedResource?.getApiId?.())
+                if (!Number.isFinite(savedId) || savedId <= 0) {
+                  const extracted = extractSavedId(savedResource)
+                  if (Number.isFinite(extracted) && (extracted as number) > 0) {
+                    savedId = extracted as number
+                  }
+                }
+                if (!Number.isFinite(savedId) || savedId <= 0) {
+                  if (!isNew && Number.isFinite(rowId) && rowId > 0) {
+                    savedId = rowId
+                  } else {
+                    throw new Error("ID inválido retornado pelo servidor.")
+                  }
+                }
+                setRows(p => p.map(r => (Number(r.id) === tempId ? { ...r, id: savedId, resource: savedResource } : r)))
                 toast.success("Fornecedor salvo.")
-              } catch {
+              } catch (err: any) {
                 setRows(prev)
-                toast.error("Não foi possível salvar o fornecedor.")
+                toast.error(err?.message ?? "Não foi possível salvar o fornecedor.")
               }
             }}
           />
@@ -152,8 +178,8 @@ export default function Page() {
   const form = (
     <FornecedorForm
       title="Novo Fornecedor"
-     onSubmit={async (dto: ProviderDto) => {
-        const optimisticId = Math.max(0, ...rows.map(r => r.id)) + 1
+      onSubmit={async (dto: ProviderDto) => {
+        const optimisticId = -Date.now()
         const draft: Fornecedor = {
           id: optimisticId,
           empresa: dto.company_name ?? "",
@@ -168,13 +194,21 @@ export default function Page() {
         const prev = rows
         setRows(p => [...p, draft])
         try {
-          await ProviderResource.createOrUpdate(dto.bindToSave())
-          const savedId = Number(dto.providerResource?.getApiId?.() ?? optimisticId)
-          setRows(p => p.map(r => (r.id === optimisticId ? { ...r, id: savedId } : r)))
+          const savedResource = await ProviderResource.createOrUpdate(dto.bindToSave())
+          let savedId = Number(savedResource?.getApiId?.())
+          if (!Number.isFinite(savedId) || savedId <= 0) {
+            const extracted = extractSavedId(savedResource)
+            if (Number.isFinite(extracted) && (extracted as number) > 0) {
+              savedId = extracted as number
+            } else {
+              throw new Error("ID inválido retornado pelo servidor.")
+            }
+          }
+          setRows(p => p.map(r => (Number(r.id) === optimisticId ? { ...r, id: savedId, resource: savedResource } : r)))
           toast.success("Fornecedor cadastrado!")
-        } catch {
+        } catch (err: any) {
           setRows(prev.filter(r => r.id !== optimisticId))
-          toast.error("Erro ao salvar fornecedor.")
+          toast.error(err?.message ?? "Erro ao salvar fornecedor.")
         }
       }} 
     />
@@ -228,6 +262,7 @@ export default function Page() {
                   Cancelar
                 </AlertDialogCancel>
                 <AlertDialogAction
+                  className="dark: text-white"
                   disabled={deleting}
                   onClick={async () => {
                     if (!deleteRow) return

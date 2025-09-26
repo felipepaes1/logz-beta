@@ -4,7 +4,7 @@ import { ItemResource } from "../Item/item.resource"
 import { ProviderResource } from "./provider.resource"
 
 export class ProviderDto extends BaseDTO {
-  public id?: string
+  public id?: number
 
   public company_name: string
   public seller?: string
@@ -25,13 +25,20 @@ export class ProviderDto extends BaseDTO {
 
     this.providerResource = resource
 
-    this.id = resource.getApiId()
-    this.company_name = resource.getAttribute("company_name")
-    this.seller = resource.getAttribute("seller")
-    this.phone = resource.getAttribute("phone")
-    this.email = resource.getAttribute("email")
-    this.delivery_time = resource.getAttribute("delivery_time")
-    this.observation = resource.getAttribute("observation")
+    const apiId = (resource as ProviderResource)?.getApiId?.()
+    const numId = Number(apiId)
+    this.id = Number.isFinite(numId) && numId > 0 ? numId : this.id
+
+    this.company_name = String(resource.getAttribute("company_name") ?? "")
+    this.seller = resource.getAttribute("seller") ?? undefined
+    this.phone = resource.getAttribute("phone") ?? undefined
+    this.email = resource.getAttribute("email") ?? undefined
+    {
+      const delivery = resource.getAttribute("delivery_time")
+      const n = Number(delivery)
+      this.delivery_time = Number.isFinite(n) && n >= 0 ? n : undefined
+    }
+    this.observation = resource.getAttribute("observation") ?? undefined
 
     this.itemResource = resource.getRelation("item")
     if (this.itemResource) {
@@ -42,6 +49,9 @@ export class ProviderDto extends BaseDTO {
   }
 
   public createFromParentColoquentResource(resource: ProviderResource): ProviderDto {
+    const apiId = (resource as ProviderResource)?.getApiId?.()
+    const n = Number(apiId)
+    this.id = Number.isFinite(n) && n > 0 ? n : undefined
     this.createFromColoquentResource(resource)
     return this
   }

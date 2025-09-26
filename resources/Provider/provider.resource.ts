@@ -6,21 +6,18 @@ import { ProviderDto } from "./provider.dto"
 export class ProviderResource extends BaseResource {
   public static jsonApiType = "tenants/:tenant_id/providers"
 
-  public static async createOrUpdate(dto: ProviderDto): Promise<any> {
-    return this.action("create-or-update", { provider_dto: dto })
+  public static async createOrUpdate(dto: ProviderDto): Promise<ProviderResource> {
+    const res = await this.action("create-or-update", { provider_dto: dto })
+    return res as ProviderResource
   }
 
-  public static async deleteMany(providersIds: Array<number | string>, tenantId?: number | string): Promise<void> {
-        if (!providersIds?.length) return;
-
-        const base = tenantId
-          ? (this.jsonApiType as string).replace(':tenant_id', String(tenantId))
-          : (new (this as any)() as BaseResource).getJsonApiType();
-
-        const idsCsv = providersIds.join(',');
-        const uri = `${base}/${idsCsv}`; 
-
-        await this.getHttpClient().delete(uri);
+  public static async destroy(id: number | string, tenantId?: number | string): Promise<void> {
+    if (!id && id !== 0) return
+    const idNum = Number(id)
+    if (!Number.isFinite(idNum) || idNum <= 0) return
+    const base = this.buildBase(tenantId)
+    const uri = `${base}/${idNum}`
+    await this.getHttpClient().delete(uri)
   }
 
   public static async saveAsNew(dto: ProviderDto): Promise<any> {
@@ -29,5 +26,12 @@ export class ProviderResource extends BaseResource {
 
   public item(): ToOneRelation {
     return this.hasOne(ItemResource, "item")
+  }
+
+  private static buildBase(tenantId?: number | string): string {
+    if (tenantId !== undefined && tenantId !== null) {
+      return (this.jsonApiType as string).replace(":tenant_id", String(tenantId))
+    }
+    return (new (this as any)() as BaseResource).getJsonApiType()
   }
 }

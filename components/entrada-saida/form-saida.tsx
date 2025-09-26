@@ -110,6 +110,16 @@ export function SaidaForm({
     [items, group]
   )
 
+    React.useEffect(() => {
+    if (!group) {
+      setItem("")
+      return
+    }
+    if (item && !filteredItems.some(i => i.getApiId()?.toString() === item)) {
+      setItem("")
+    }
+  }, [group, filteredItems])
+
   React.useEffect(() => {
     setGroup(groupRelation?.getApiId()?.toString() ?? "")
     setItem(itemRelation?.getApiId()?.toString() ?? "")
@@ -230,11 +240,26 @@ export function SaidaForm({
                 <SelectValue placeholder="Selecione uma ferramenta" />
               </SelectTrigger>
               <SelectContent>
-                {filteredItems.map((i) => (
-                  <SelectItem key={i.getApiId()} value={i.getApiId()!.toString()}>
-                    {i.getAttribute("name")}
+                {!group && (
+                  <SelectItem value="__no_group__" disabled>
+                    Selecione um grupo primeiro
                   </SelectItem>
-                ))}
+                )}
+                {group && filteredItems.length === 0 && (
+                  <SelectItem value="__empty_items__" disabled>
+                    NÃO HÁ FERRAMENTAS CADASTRADAS
+                  </SelectItem>
+                )}
+                {group && filteredItems.length > 0 &&
+                  filteredItems.map((i) => (
+                    <SelectItem
+                      key={i.getApiId()}
+                      value={i.getApiId()!.toString()}
+                    >
+                      {i.getAttribute("name")}
+                    </SelectItem>
+                  ))
+                }
               </SelectContent>
             </Select>
             {errors.item && (
@@ -242,7 +267,6 @@ export function SaidaForm({
             )}
           </div>
 
-          {/* máquina */}
           <div className="flex flex-col gap-1">
             <Label>Máquina</Label>
             <Select value={machine} onValueChange={setMachine}>
@@ -264,7 +288,6 @@ export function SaidaForm({
             )}
           </div>
 
-          {/* colaborador */}
           <div className="flex flex-col gap-1">
             <Label>Colaborador</Label>
             <Select value={collaborator} onValueChange={setCollaborator}>
@@ -291,7 +314,6 @@ export function SaidaForm({
             )}
           </div>
 
-          {/* preço e quantidade */}
           <div className="grid grid-cols-1 gap-4">
             <div className="flex flex-col gap-1">
               <Label>Quantidade</Label>
@@ -330,7 +352,6 @@ export function SaidaForm({
             </div>
           </div>
 
-          {/* ordem serviço opcional */}
           <div className="flex flex-col gap-3">
             <Label>Ordem de serviço (opcional)</Label>
             <Select value={pcp} onValueChange={setPcp}>
