@@ -91,10 +91,6 @@ export default function Page() {
     const current = row
     if (!current) return false
     const idNum = Number(current.id)
-    if (!Number.isFinite(idNum) || idNum <= 0) {
-      toast.error("ID inválido para exclusão. Recarregue a página e tente novamente.")
-      return false
-    }
     const prev = rows
     setRows(p => p.filter(r => Number(r.id) !== idNum))
     try {
@@ -123,45 +119,51 @@ export default function Page() {
             row={row.original}
             onRequestDelete={requestDelete}
             onSave={async (dto: ProviderDto) => {
-              const rowId = Number(row.id)
-              const isNew = !Number.isFinite(rowId) || rowId <= 0
+              const currentRow = row.original
               const prev = rows
-              const tempId = isNew ? -Date.now() : rowId
+              const numericId = Number(currentRow?.id)
+              const hasPersistedId = Number.isFinite(numericId) && numericId > 0
+              const provisionalId = hasPersistedId
+                ? numericId
+                : Number.isFinite(numericId) && numericId !== 0
+                  ? numericId
+                  : -Date.now()
+
               const draft: Fornecedor = {
-                id: tempId,
+                ...currentRow,
+                id: provisionalId,
                 empresa: dto.company_name ?? "",
                 vendedor: dto.seller ?? "",
                 email: dto.email ?? "",
                 telefone: dto.phone ?? "",
                 prazo: Number(dto.delivery_time ?? 0),
                 observacoes: dto.observation ?? "",
-                resource: dto.providerResource,
+                resource: dto.providerResource ?? currentRow?.resource,
                 dto,
               }
-           
-              if (isNew) {
-                setRows(p => [...p, draft])
-              } else {
-                setRows(p => p.map(r => (Number(r.id) === rowId ? draft : r)))
-              }
+
+              setRows(list =>
+                list.map(item => (item === currentRow || Number(item.id) === numericId ? draft : item))
+              )
 
               try {
                 const savedResource = await ProviderResource.createOrUpdate(dto.bindToSave())
-                let savedId = Number(savedResource?.getApiId?.())
-                if (!Number.isFinite(savedId) || savedId <= 0) {
-                  const extracted = extractSavedId(savedResource)
-                  if (Number.isFinite(extracted) && (extracted as number) > 0) {
-                    savedId = extracted as number
-                  }
+                let savedId = extractSavedId(savedResource)
+                if (typeof savedId !== "number" || !Number.isFinite(savedId) || savedId <= 0) {
+                  savedId = hasPersistedId ? numericId : undefined
                 }
-                if (!Number.isFinite(savedId) || savedId <= 0) {
-                  if (!isNew && Number.isFinite(rowId) && rowId > 0) {
-                    savedId = rowId
-                  } else {
-                    throw new Error("ID inválido retornado pelo servidor.")
-                  }
+                const resolvedId = Number(savedId)
+                dto.id = resolvedId
+                dto.providerResource = savedResource
+                const updated: Fornecedor = {
+                  ...draft,
+                  id: resolvedId,
+                  resource: savedResource,
+                  dto,
                 }
-                setRows(p => p.map(r => (Number(r.id) === tempId ? { ...r, id: savedId, resource: savedResource } : r)))
+                setRows(list =>
+                  list.map(item => (item === draft || Number(item.id) === provisionalId ? updated : item))
+                )
                 toast.success("Fornecedor salvo.")
               } catch (err: any) {
                 setRows(prev)
@@ -195,19 +197,24 @@ export default function Page() {
         setRows(p => [...p, draft])
         try {
           const savedResource = await ProviderResource.createOrUpdate(dto.bindToSave())
-          let savedId = Number(savedResource?.getApiId?.())
-          if (!Number.isFinite(savedId) || savedId <= 0) {
-            const extracted = extractSavedId(savedResource)
-            if (Number.isFinite(extracted) && (extracted as number) > 0) {
-              savedId = extracted as number
-            } else {
-              throw new Error("ID inválido retornado pelo servidor.")
-            }
+          let savedId = extractSavedId(savedResource)
+          if (typeof savedId !== "number" || !Number.isFinite(savedId) || savedId <= 0) {
+            const fallbackId = Number(savedResource?.getApiId?.())
+            savedId = Number.isFinite(fallbackId) && fallbackId > 0 ? fallbackId : undefined
           }
-          setRows(p => p.map(r => (Number(r.id) === optimisticId ? { ...r, id: savedId, resource: savedResource } : r)))
+          const resolvedId = Number(savedId)
+          dto.id = resolvedId
+          dto.providerResource = savedResource
+          const created: Fornecedor = {
+            ...draft,
+            id: resolvedId,
+            resource: savedResource,
+            dto,
+          }
+          setRows(p => p.map(r => (Number(r.id) === optimisticId ? created : r)))
           toast.success("Fornecedor cadastrado!")
         } catch (err: any) {
-          setRows(prev.filter(r => r.id !== optimisticId))
+          setRows(prev)
           toast.error(err?.message ?? "Erro ao salvar fornecedor.")
         }
       }} 

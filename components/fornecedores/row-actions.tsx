@@ -13,11 +13,12 @@ import { Drawer } from "@/components/ui/drawer"
 import { IconDotsVertical } from "@tabler/icons-react"
 import type { Fornecedor } from "./types"
 import { FornecedorForm } from "./form"
+import { ProviderDto } from "@/resources/Provider/provider.dto"
 
 interface RowActionsProps {
   row: Fornecedor
-    onRequestDelete: (row: Fornecedor) => void
-    onSave: (dto: any) => void
+  onRequestDelete: (row: Fornecedor) => void
+  onSave: (dto: ProviderDto) => Promise<void> | void
 }
 
 export function RowActions({ row, onRequestDelete, onSave }: RowActionsProps) {
@@ -60,15 +61,15 @@ export function RowActions({ row, onRequestDelete, onSave }: RowActionsProps) {
       <Drawer open={open} onOpenChange={setOpen} direction="right">
         {open ? (
           <FornecedorForm
-          title="Editar Fornecedor"
-          initialValues={row}
-          resource={row.resource}
-          onRequestClose={() => setOpen(false)}
-          onSubmit={async (dto) => {
-            await onSave(dto)   
-            setOpen(false)
-          }}
-        />
+            title="Editar Fornecedor"
+            initialValues={row}
+            resource={row.resource}
+            onRequestClose={() => setOpen(false)}
+            onSubmit={async (dto: ProviderDto) => {
+              await onSave(dto)
+              setOpen(false)
+            }}
+          />
         ) : null}
       </Drawer>
     </>
