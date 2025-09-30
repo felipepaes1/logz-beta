@@ -73,6 +73,7 @@ export default function Page() {
             observacoes: dto.observation ?? "",
             resource: r,
             dto,
+            isPending: false,
           }
         })
         if (mounted) setRows(mapped)
@@ -115,10 +116,21 @@ export default function Page() {
       {
         id: "actions",
         cell: ({ row }) => (
-          <RowActions
-            row={row.original}
-            onRequestDelete={requestDelete}
-            onSave={async (dto: ProviderDto) => {
+          (() => {
+            const r = row.original
+            const hasPersistedId = Number.isFinite(Number(r.id)) && Number(r.id) > 0
+            if (r.isPending || !hasPersistedId) {
+              return (
+                <span className="text-muted-foreground text-xs" aria-label="Sincronizando">
+                  Sincronizando…
+                </span>
+              )
+            }
+            return (
+              <RowActions
+                row={r}
+                onRequestDelete={requestDelete}
+                onSave={async (dto: ProviderDto) => {
               const currentRow = row.original
               const prev = rows
               const numericId = Number(currentRow?.id)
@@ -138,8 +150,9 @@ export default function Page() {
                 telefone: dto.phone ?? "",
                 prazo: Number(dto.delivery_time ?? 0),
                 observacoes: dto.observation ?? "",
-                resource: dto.providerResource ?? currentRow?.resource,
+                resource: (dto.providerResource ?? currentRow?.resource)!,
                 dto,
+                isPending: true,
               }
 
               setRows(list =>
@@ -149,8 +162,13 @@ export default function Page() {
               try {
                 const savedResource = await ProviderResource.createOrUpdate(dto.bindToSave())
                 let savedId = extractSavedId(savedResource)
-                if (typeof savedId !== "number" || !Number.isFinite(savedId) || savedId <= 0) {
-                  savedId = hasPersistedId ? numericId : undefined
+                if (!Number.isFinite(Number(savedId)) || Number(savedId) <= 0) {
+                  const fallbackFromResource = Number(savedResource?.getApiId?.())
+                  if (Number.isFinite(fallbackFromResource) && fallbackFromResource > 0) {
+                    savedId = fallbackFromResource
+                  } else if (hasPersistedId) {
+                    savedId = numericId
+                  }
                 }
                 const resolvedId = Number(savedId)
                 dto.id = resolvedId
@@ -160,6 +178,7 @@ export default function Page() {
                   id: resolvedId,
                   resource: savedResource,
                   dto,
+                  isPending: false,
                 }
                 setRows(list =>
                   list.map(item => (item === draft || Number(item.id) === provisionalId ? updated : item))
@@ -169,8 +188,10 @@ export default function Page() {
                 setRows(prev)
                 toast.error(err?.message ?? "Não foi possível salvar o fornecedor.")
               }
-            }}
-          />
+           }}
+            />
+          )
+        })()
         ),
       },
     ],
@@ -190,8 +211,9 @@ export default function Page() {
           telefone: dto.phone ?? "",
           prazo: Number(dto.delivery_time ?? 0),
           observacoes: dto.observation ?? "",
-          resource: dto.providerResource,
+          resource: (dto.providerResource as any),
           dto,
+          isPending: true,
         }
         const prev = rows
         setRows(p => [...p, draft])
@@ -210,6 +232,7 @@ export default function Page() {
             id: resolvedId,
             resource: savedResource,
             dto,
+            isPending: false,
           }
           setRows(p => p.map(r => (Number(r.id) === optimisticId ? created : r)))
           toast.success("Fornecedor cadastrado!")

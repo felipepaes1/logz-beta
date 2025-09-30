@@ -24,6 +24,9 @@ interface RowActionsProps {
 export function RowActions({ row, onRequestDelete, onSave }: RowActionsProps) {
   const [open, setOpen] = React.useState(false)
   const [menuOpen, setMenuOpen] = React.useState(false)
+  const hasPersistedId = Number.isFinite(Number(row?.id)) && Number(row?.id) > 0
+  const disabled = !!row?.isPending || !hasPersistedId
+  const formKey = String(hasPersistedId ? row.id : `new-${row?.id}`)
 
   return (
     <>
@@ -33,6 +36,8 @@ export function RowActions({ row, onRequestDelete, onSave }: RowActionsProps) {
             variant="ghost"
             className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
             size="icon"
+            disabled={disabled}
+            title={disabled ? "Ação indisponível enquanto o registro estiver sincronizando. Aguarde" : "Ações"}
           >
             <IconDotsVertical />
             <span className="sr-only">Open menu</span>
@@ -40,7 +45,9 @@ export function RowActions({ row, onRequestDelete, onSave }: RowActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-32">
           <DropdownMenuItem
+            disabled={disabled}
             onClick={() => {
+              if (disabled) return
               setTimeout(() => setOpen(true), 0)
             }}
           >
@@ -49,7 +56,9 @@ export function RowActions({ row, onRequestDelete, onSave }: RowActionsProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="text-destructive focus:text-destructive"
+            disabled={disabled}
             onSelect={() => {
+              if (disabled) return
               setMenuOpen(false)
               setTimeout(() => onRequestDelete(row), 0)
             }}
@@ -61,6 +70,7 @@ export function RowActions({ row, onRequestDelete, onSave }: RowActionsProps) {
       <Drawer open={open} onOpenChange={setOpen} direction="right">
         {open ? (
           <FornecedorForm
+            key={formKey}
             title="Editar Fornecedor"
             initialValues={row}
             resource={row.resource}
