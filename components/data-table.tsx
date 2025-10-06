@@ -282,7 +282,7 @@ export function DataTable<T extends { id: number }>({
                 ) : (
                   <TableRow>
                     <TableCell colSpan={columns.length + extraColCount} className="h-24 text-center">
-                      No results.
+                      Não há registros.
                     </TableCell>
                   </TableRow>
                 )}
