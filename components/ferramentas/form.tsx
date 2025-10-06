@@ -22,6 +22,7 @@ import {
 import { ItemResource } from "@/resources/Item/item.resource"
 import { ManufacturerResource } from "@/resources/Manufacturer/manufacturer.resource"
 import { ItemGroupResource } from "@/resources/ItemGroup/item-group.resource"
+import { ManufacturerDto } from "@/resources/Manufacturer/manufacturer.dto"
 import { ItemGroupDto } from "@/resources/ItemGroup/item-group.dto"
 import { ItemDto } from "@/resources/Item/item.dto"
 import { cn } from "@/lib/utils"
@@ -73,6 +74,12 @@ export function FerramentaForm({
   const [newGroupName, setNewGroupName] = React.useState("")
   const [creatingGroup, setCreatingGroup] = React.useState(false)
   const loadingGroupsRef = React.useRef(false)
+  const [mans, setMans] = React.useState<ManufacturerResource[]>(manufacturers)
+  React.useEffect(() => setMans(manufacturers), [manufacturers])
+  const wantSelectManufacturerIdRef = React.useRef<string | null>(null)
+  const [newManufacturerOpen, setNewManufacturerOpen] = React.useState(false)
+  const [newManufacturerName, setNewManufacturerName] = React.useState("")
+  const [creatingManufacturer, setCreatingManufacturer] = React.useState(false)
   const [providers, setProviders] = React.useState<ProviderResource[]>([])
   const [providerId, setProviderId] = React.useState<string>(
     resource?.getRelation?.("provider")?.getApiId?.()?.toString?.() ??
@@ -100,6 +107,19 @@ export function FerramentaForm({
   }, [groups])
 
   React.useEffect(() => {
+    const wanted = wantSelectManufacturerIdRef.current
+    if (!wanted) return
+    const found = mans.some((m) => {
+      const rawId = m.getApiId?.() ?? m.getAttribute?.("id")
+      return String(rawId ?? "") === wanted
+    })
+    if (found) {
+      setManufacturerId(wanted)
+      wantSelectManufacturerIdRef.current = null
+    }
+  }, [mans])
+
+  React.useEffect(() => {
     let mounted = true
     ProviderResource
       .get()
@@ -119,7 +139,7 @@ export function FerramentaForm({
 
     const nome = data.get("nome")?.toString().trim() || ""
     const codigo = data.get("codigo")?.toString().trim() || ""
-    const manufacturerRsc = manufacturers.find(
+    const manufacturerRsc = mans.find(
       (m) => m.getApiId()?.toString() === manufacturerId
     )
     const itemGroupRsc = groups.find((g) => g.getApiId()?.toString() === itemGroupId)
@@ -256,16 +276,24 @@ export function FerramentaForm({
                 <SelectValue placeholder="Selecione um fabricante" />
               </SelectTrigger>
               <SelectContent>
-                {manufacturers.map((m) => (
+                {mans.map((m, idx) => (
                   <SelectItem
-                    key={m.getApiId()}
-                    value={m.getApiId()?.toString() || ""}
+                    key={(m.getApiId?.() ?? m.getAttribute?.("id") ?? `m-${idx}`).toString()}
+                    value={m.getApiId()?.toString() || m.getAttribute?.("id")?.toString() || ""}
                   >
                     {m.getAttribute("description")}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => setNewManufacturerOpen(true)}
+            >
+              + Novo Fabricante
+            </Button>
             {errors.manufacturer && (
               <span className="text-destructive text-xs">
                 {errors.manufacturer}
@@ -410,6 +438,96 @@ export function FerramentaForm({
               </AlertDialogCancel>
               <AlertDialogAction className="dark: text-white" type="submit" disabled={creatingGroup || !newGroupName.trim()}>
                 {creatingGroup ? "Criando..." : "Confirmar"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </form>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* AlertDialog: Criar novo fabricante */}
+      <AlertDialog open={newManufacturerOpen} onOpenChange={setNewManufacturerOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Novo fabricante</AlertDialogTitle>
+            <AlertDialogDescription>
+              Informe o nome para cadastrar um novo fabricante.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              const name = newManufacturerName.trim()
+              if (!name) {
+                toast.error("Informe o nome do fabricante.")
+                return
+              }
+              try {
+                setCreatingManufacturer(true)
+                const dto = new ManufacturerDto()
+                ;(dto as any).description = name
+
+                const created = await ManufacturerResource.createOrUpdate(dto)
+                const returnedId =
+                  created?.data?.id ??
+                  created?.id ??
+                  created?.data?.data?.id ??
+                  created?.data?.data?.attributes?.id ??
+                  null
+
+                const fresh = await ManufacturerResource.get()
+                const freshList = fresh?.getData?.() ?? []
+
+                if (returnedId != null) {
+                  wantSelectManufacturerIdRef.current = String(returnedId)
+                } else {
+                  const found = freshList.find((m: ManufacturerResource) =>
+                    (m.getAttribute?.("description") ?? m.getAttribute?.("name") ?? "")
+                      .toString()
+                      .toLowerCase() === name.toLowerCase()
+                  )
+                  if (found) {
+                    const fid = String(found.getApiId?.() ?? found.getAttribute?.("id") ?? "")
+                    wantSelectManufacturerIdRef.current = fid || null
+                  }
+                }
+
+                setMans(freshList)
+                toast.success("Fabricante criado com sucesso!")
+                setNewManufacturerName("")
+                setNewManufacturerOpen(false)
+              } catch {
+                toast.error("Não foi possível criar o fabricante.")
+              } finally {
+                setCreatingManufacturer(false)
+              }
+            }}
+          >
+            <div className="py-2">
+              <Label htmlFor="novo-fabricante" className="mb-1 block">
+                Nome do fabricante
+              </Label>
+              <Input
+                id="novo-fabricante"
+                value={newManufacturerName}
+                onChange={(e) => setNewManufacturerName(e.target.value)}
+                placeholder="Ex.: Sandvik, Iscar, BFT Burzoni..."
+                autoFocus
+              />
+            </div>
+            <AlertDialogFooter>
+              <AlertDialogCancel
+                type="button"
+                disabled={creatingManufacturer}
+                onClick={() => setNewManufacturerName("")}
+              >
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                className="dark: text-white"
+                type="submit"
+                disabled={creatingManufacturer || !newManufacturerName.trim()}
+              >
+                {creatingManufacturer ? "Criando..." : "Confirmar"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </form>
