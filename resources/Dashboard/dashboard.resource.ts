@@ -1,16 +1,9 @@
 import { BaseResource } from "@/base/BaseResource";
 
-/**
- * Recurso dedicado às rotas de dashboard.
- * Padrão do projeto: jsonApiType com placeholder de tenant.
- */
+
 export class DashboardPanoramaResource extends BaseResource {
   public static jsonApiType: string = "tenants/:tenant_id/dashboard";
 
-  /**
-   * GET /tenants/{tenant_id}/dashboard/panorama
-   * Retorna o payload agregado (cards, séries e tops) exatamente como o backend envia.
-   */
   private static _inflight = new Map<string, Promise<DashboardPanoramaAttributes>>();
   private static _cache = new Map<string, { exp: number; data: DashboardPanoramaAttributes }>();
   private static _ttlMs = 30_000;
@@ -28,12 +21,10 @@ export class DashboardPanoramaResource extends BaseResource {
     const uri = (this as any).jsonApiType + "/panorama";
     const key = this._key(params);
 
-    // cache curto (evita refetch no mesmo view)
     const cached = this._cache.get(key);
     const now = Date.now();
     if (cached && cached.exp > now) return cached.data;
 
-    // coalescing: se já tem em voo, reusa a mesma promise
     const existing = this._inflight.get(key);
     if (existing) return existing;
 
@@ -54,11 +45,11 @@ export class DashboardPanoramaResource extends BaseResource {
   }
 }
 
-/** Tipos (DTO “levinho”, apenas interfaces TS) */
+
 export interface SeriePoint {
-  period: string;   // 'YYYY-MM'
-  consumo: number;  // R$
-  compra: number;   // R$
+  period: string;   
+  consumo: number;  
+  compra: number;   
 }
 
 export interface AlertItem {
@@ -70,9 +61,9 @@ export interface AlertItem {
 }
 
 export interface TopRow {
-  key: string;             // id ou "—"
+  key: string;            
   name: string | null;
-  valor: number;           // R$
+  valor: number;          
 }
 
 export interface DashboardPanoramaAttributes {
@@ -86,7 +77,7 @@ export interface DashboardPanoramaAttributes {
     consumos: { total: number; media_mensal: number };
     estoque_sem_movimentacao: { total: number };
     alertas_preview: AlertItem[];
-    eficiencia_compra: { por_mes: Record<string, number> }; // 0..120
+    eficiencia_compra: { por_mes: Record<string, number> };
     acompanhamento_mes_atual: {
       compras_mes_atual: number;
       consumo_mes_atual: number;
@@ -103,5 +94,5 @@ export interface DashboardPanoramaAttributes {
     items_top5: TopRow[];
   };
   generated_at: string;
-  currency: string; // "BRL"
+  currency: string; 
 }

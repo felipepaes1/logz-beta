@@ -31,7 +31,7 @@ export function SectionCards({ tenantId }: Props) {
       const res = await DashboardPanoramaResource.panorama()
       if (!mounted) return
       setData(res)
-      // eficiência do mês atual
+
       const now = new Date()
       const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
       const pct = res.cards.eficiencia_compra.por_mes[key] ?? 0

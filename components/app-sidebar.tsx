@@ -8,6 +8,10 @@ import {
   IconListDetails,
   IconTruck,
   IconUsers,
+  IconTool,
+  IconTimeline,
+  IconArrowsSort,
+  IconBuildingFactory2,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -32,17 +36,17 @@ export const sidebarData = {
     {
       title: "Panorama geral",
       url: "/dashboard",
-      icon: IconDashboard,
+      icon: IconTimeline,
     },
     {
       title: "Colaboradores",
       url: "/colaboradores",
-      icon: IconListDetails,
+      icon: IconUsers,
     },
     {
       title: "Ferramentas",
       url: "/ferramentas",
-      icon: IconChartBar,
+      icon: IconTool,
     },
     {
       title: "Fornecedores",
@@ -52,12 +56,12 @@ export const sidebarData = {
     {
       title: "Centro de Custos",
       url: "/centro-de-custos",
-      icon: IconFolder,
+      icon: IconBuildingFactory2,
     },
     {
       title: "Entrada/Saída",
       url: "/entrada-saida",
-      icon: IconUsers,
+      icon: IconArrowsSort,
     },
   ]
 }
