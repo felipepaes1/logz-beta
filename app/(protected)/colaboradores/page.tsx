@@ -1,7 +1,6 @@
 "use client"
 import { DataTable } from "@/components/data-table"
 import type { ColumnDef } from "@tanstack/react-table"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import * as React from "react"

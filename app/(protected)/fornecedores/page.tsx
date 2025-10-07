@@ -184,6 +184,8 @@ export default function Page() {
                   list.map(item => (item === draft || Number(item.id) === provisionalId ? updated : item))
                 )
                 toast.success("Fornecedor salvo.")
+                // SOLUÇÃO TEMPORÁRIA DE RELOADING DA PÁGINA !!!!!!!!!!!!!!!
+                if (typeof window !== "undefined") window.location.reload()
               } catch (err: any) {
                 setRows(prev)
                 toast.error(err?.message ?? "Não foi possível salvar o fornecedor.")
@@ -236,6 +238,8 @@ export default function Page() {
           }
           setRows(p => p.map(r => (Number(r.id) === optimisticId ? created : r)))
           toast.success("Fornecedor cadastrado!")
+          // SOLUÇÃO TEMPORÁRIA PARA RELOADING DA PÁGINA PÓS CADASTRO DE FORNECEDORES
+          if (typeof window !== "undefined") window.location.reload()
         } catch (err: any) {
           setRows(prev)
           toast.error(err?.message ?? "Erro ao salvar fornecedor.")
