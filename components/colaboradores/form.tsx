@@ -57,6 +57,7 @@ export function ColaboradorForm({ onSubmit, resource, title, onRequestClose }: P
     dto.name = nome
     dto.code = codigo
     dto.active = active
+    dto.password = senha
 
     try {
       setSubmitting(true)
@@ -115,15 +116,19 @@ export function ColaboradorForm({ onSubmit, resource, title, onRequestClose }: P
 
 
           <div className="flex flex-col gap-1">
-            <Label htmlFor="login">Senha</Label>
+            <Label htmlFor="senha">Senha</Label>
             <Input
               id="senha"
               name="senha"
-              defaultValue={resource?.getAttribute("password-app")}
+              type="password"
+              autoComplete="new-password"
+              placeholder="Defina uma senha para o colaborador"
               className={cn(errors.senha && "border-destructive")}
+              aria-invalid={!!errors.senha}
+              aria-describedby={errors.senha ? "senha-erro" : undefined}
             />
             {errors.senha && (
-              <span className="text-destructive text-xs">{errors.senha}</span>
+              <span id="senha-erro" className="text-destructive text-xs">{errors.senha}</span>
             )}
           </div>
 

@@ -10,6 +10,7 @@ export class CollaboratorDto extends BaseDTO {
     public code: string;
     public document_number: string;
     public phone: string;
+    public password?: string;
 
     public collaboratorResource?: CollaboratorResource;
 
