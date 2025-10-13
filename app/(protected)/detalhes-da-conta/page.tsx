@@ -271,7 +271,7 @@ export default function Page() {
               {perfilErrors.email && <p className="text-sm text-destructive">{perfilErrors.email}</p>}
             </div>
             <div className="pt-2">
-              <Button type="submit" disabled={sendingPerfil || loadingUser} aria-busy={sendingPerfil || loadingUser}>
+              <Button type="submit" disabled={sendingPerfil || loadingUser} aria-busy={sendingPerfil || loadingUser} className="dark:text-white">
                 {sendingPerfil ? "Salvando..." : loadingUser ? "Carregando..." : "Salvar"}
               </Button>
             </div>
@@ -324,7 +324,7 @@ export default function Page() {
               )}
             </div>
             <div className="pt-2">
-              <Button type="submit" disabled={sendingSenha || loadingUser} aria-busy={sendingSenha || loadingUser}>
+              <Button type="submit" disabled={sendingSenha || loadingUser} aria-busy={sendingSenha || loadingUser} className="dark:text-white">
                 {sendingSenha ? "Salvando..." : loadingUser ? "Carregando..." : "Salvar"}
               </Button>
             </div>
