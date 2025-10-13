@@ -82,10 +82,14 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <IconUserCircle />
-                Conta
-              </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+              window.location.href = "/detalhes-da-conta"
+            }}
+            >
+            <IconUserCircle />
+              Conta
+            </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
