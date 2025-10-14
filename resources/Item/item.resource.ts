@@ -5,6 +5,7 @@ import { ItemGroupResource } from "../ItemGroup/item-group.resource";
 import { MachineResource } from "../Machine/machine.resource";
 import { ItemDto } from "./item.dto";
 import { AttachmentResource } from "../Attachment/attachment.resourse";
+import { ProviderResource } from "../Provider/provider.resource";
 
 export class ItemResource extends BaseResource {
     public static jsonApiType = 'tenants/:tenant_id/items';
@@ -48,6 +49,10 @@ export class ItemResource extends BaseResource {
 
     public avatar(): ToOneRelation{
         return this.hasOne(AttachmentResource, 'avatar');
+    }
+
+    public provider(): ToOneRelation {
+        return this.hasOne(ProviderResource, 'provider');
     }
 
     public machine(): ToOneRelation {

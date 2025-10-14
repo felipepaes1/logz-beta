@@ -66,7 +66,7 @@ export function ChartBarLabelTopMachines({ tenantId }: Props) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Top 5 Consumo de Máquinas</CardTitle>
+        <CardTitle>Top 5 Consumo por Máquinas</CardTitle>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig}>

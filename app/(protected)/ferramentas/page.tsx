@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils"
 import { ItemResource } from "@/resources/Item/item.resource"
 import { ManufacturerResource } from "@/resources/Manufacturer/manufacturer.resource"
 import { ItemGroupResource } from "@/resources/ItemGroup/item-group.resource"
+import { ProviderResource } from "@/resources/Provider/provider.resource"
 import { PluralResponse } from "coloquent"
 import { FerramentaForm } from "@/components/ferramentas/form"
 import { RowActions } from "@/components/ferramentas/row-actions"
@@ -51,7 +52,7 @@ export default function Page() {
 
 
   React.useEffect(() => {
-    ItemResource.with(["manufacturer", "itemGroup"]).get().then((response: PluralResponse<ItemResource>) => {
+    ItemResource.with(["manufacturer", "itemGroup", "provider"]).get().then((response: PluralResponse<ItemResource>) => {
       setItems(response.getData())
     })
     ManufacturerResource.get().then((response: PluralResponse<ManufacturerResource>) => {
@@ -67,7 +68,13 @@ export default function Page() {
     const formatted = items.map((i) => {
       const manufacturer = i.getRelation("manufacturer") as ManufacturerResource | undefined
       const itemGroup = i.getRelation("itemGroup") as ItemGroupResource | undefined
+      const provider = i.getRelation?.("provider") as ProviderResource | undefined
       const preOrderedAttr = i.getAttribute("pre_ordered") ?? i.getAttribute("pre-ordered") ?? 0
+      const fornecedorNome =
+        provider?.getAttribute?.("company_name") ??
+        provider?.getAttribute?.("name") ??
+        i.getAttribute?.("supplier") ??
+        ""
       return {
         id: Number(i.getApiId()),
         nome: i.getAttribute("name"),
@@ -76,12 +83,13 @@ export default function Page() {
         fabricante: manufacturer?.getAttribute("description") || "",
         estoqueMinimo: Number(i.getAttribute("min_quantity") ?? 0),
         estoqueAtual: Number(i.getAttribute("quantity") ?? 0),
-        fornecedor: i.getAttribute("supplier") || "",
+        fornecedor: fornecedorNome,
         preOrdered: Number(preOrderedAttr),
         status: i.getAttribute("active") ? "Ativo" : "Inativo",
         resource: i,
         manufacturer,
         itemGroup,
+        provider,
       }
     })
     setRows(formatted)
@@ -159,13 +167,15 @@ export default function Page() {
     return true
   }, [])
 
+  
+
   const columns = React.useMemo<ColumnDef<Ferramenta>[]>(
     () => {
       const cols: ColumnDef<Ferramenta>[] = [
-      { accessorKey: "nome", header: "Nome" },
+      { accessorKey: "nome", header: "Nome", meta: { className: "max-w-[240px]", truncate: true } },
       { accessorKey: "codigo", header: "Código" },
-      ...(tab === "alertas" ? [] : [{ accessorKey: "grupo", header: "Grupo" }] as ColumnDef<Ferramenta>[]),
-      { accessorKey: "fabricante", header: "Fabricante" },
+      ...(tab === "alertas" ? [] : [{ accessorKey: "grupo", header: "Grupo", meta: { className: "max-w-[200px]", truncate: true } }] as ColumnDef<Ferramenta>[]),
+      { accessorKey: "fabricante", header: "Fabricante", meta: { className: "max-w-[200px]", truncate: true } },
       {
         accessorKey: "estoqueMinimo",
         header: "Estoque Mínimo",
@@ -215,7 +225,7 @@ export default function Page() {
         },
         meta: { className: "text-center" },
       },
-      { accessorKey: "fornecedor", header: "Fornecedor" },
+      { accessorKey: "fornecedor", header: "Fornecedor", meta: { className: "max-w-[220px]", truncate: true } },
       ...(tab === "alertas"
         ? ([{
             id: "preOrdered",
@@ -285,10 +295,16 @@ export default function Page() {
                           "",
                         estoqueMinimo: dto.min_quantity,
                         estoqueAtual: dto.quantity,
+                        fornecedor:
+                          dto.providerResource?.getAttribute?.("company_name") ??
+                          dto.providerResource?.getAttribute?.("name") ??
+                          dto.supplier ??
+                          "",
                         status: dto.active ? "Ativo" : "Inativo",
                         resource: dto.itemResource,
                         manufacturer: dto.manufacturerResource,
                         itemGroup: dto.itemGroupResource,
+                        provider: dto.providerResource,
                         preOrdered:
                           Number(dto.itemResource?.getAttribute?.("pre_ordered") ??
                           dto.itemResource?.getAttribute?.("pre-ordered") ??
@@ -326,28 +342,12 @@ export default function Page() {
           success: "Ferramenta cadastrada!",
           error: "Erro ao salvar ferramenta.",
         })
-        return p.then(() =>
-          setRows(prev => [
-            ...prev,
-            {
-              id: prev.length + 1,
-              nome: dto.name,
-              codigo: dto.code,
-              grupo: dto.itemGroupResource?.getAttribute("description") || "",
-              fabricante: dto.manufacturerResource?.getAttribute("description") || "",
-              estoqueMinimo: dto.min_quantity,
-              estoqueAtual: dto.quantity,
-              fornecedor: "",
-              status: dto.active ? "Ativo" : "Inativo",
-              resource: new ItemResource(),
-              manufacturer: dto.manufacturerResource,
-              itemGroup: dto.itemGroupResource,
-            },
-          ])
-        )
+        return p.then(() => {
+          if (typeof window !== "undefined") window.location.reload()
+        })
       }}
     />
-  ), [manufacturers, itemGroups, setRows])
+  ), [manufacturers, itemGroups])
 
   return (
     <div className="flex flex-1 flex-col">
@@ -436,7 +436,7 @@ export default function Page() {
                 addButtonLabel="Nova Ferramenta"
                 renderAddForm={form}
                 isLoading={isLoading}
-                withDragHandle={false}   
+                
               />
             </TabsContent>
 
@@ -449,7 +449,7 @@ export default function Page() {
                 addButtonLabel="Nova Ferramenta"
                 renderAddForm={form}
                 isLoading={isLoading}
-                withDragHandle  
+                
               />
             </TabsContent>
 

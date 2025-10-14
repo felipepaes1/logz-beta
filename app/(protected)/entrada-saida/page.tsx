@@ -255,7 +255,7 @@ export default function Page() {
     <>
       <Drawer direction="right" open={isEntradaOpen} onOpenChange={setIsEntradaOpen}>
         <DrawerTrigger asChild>
-          <Button variant="outline" size="sm">Cadastrar entrada</Button>
+          <Button variant="outline" size="sm">Cadastrar Entrada</Button>
         </DrawerTrigger>
         {isEntradaOpen ? (
           <EntradaForm

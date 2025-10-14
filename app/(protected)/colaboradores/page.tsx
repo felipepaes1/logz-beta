@@ -35,7 +35,14 @@ export default function Page() {
       status: c.getAttribute("active") ? "Ativo" : "Inativo",
       resource: c,
     }))
-    setRows(formatted)
+    // Ativos primeiro; manter ordem alfabética por nome dentro dos grupos
+    const sorted = [...formatted].sort((a, b) => {
+      const aActive = a.status === "Ativo" ? 1 : 0
+      const bActive = b.status === "Ativo" ? 1 : 0
+      if (aActive !== bActive) return bActive - aActive
+      return String(a.nome).localeCompare(String(b.nome))
+    })
+    setRows(sorted)
   }, [collaborators])
 
   const columns = React.useMemo<ColumnDef<Colaborador>[]>(
@@ -102,7 +109,7 @@ export default function Page() {
             addButtonLabel="Novo Colaborador"
             renderAddForm={form}
             isLoading={isLoading}
-            withDragHandle
+            
           />
         </div>
       </div>

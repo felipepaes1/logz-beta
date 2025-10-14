@@ -12,4 +12,5 @@ export interface Ferramenta {
   resource?: import("@/resources/Item/item.resource").ItemResource
   manufacturer?: import("@/resources/Manufacturer/manufacturer.resource").ManufacturerResource
   itemGroup?: import("@/resources/ItemGroup/item-group.resource").ItemGroupResource
+  provider?: import("@/resources/Provider/provider.resource").ProviderResource
 }

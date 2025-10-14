@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { ChartBarMonthlyBalance } from "@/components/graficos/chart-bar-monthly-balance"
 import { DashboardPanoramaResource, type DashboardPanoramaAttributes } from "@/resources/Dashboard/dashboard.resource"
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 
 type Props = { tenantId: number }
 export function SectionCards({ tenantId }: Props) {
@@ -67,6 +68,13 @@ export function SectionCards({ tenantId }: Props) {
   const alertas = (data?.cards.alertas_preview ?? []).map(a => ({
     id: a.item_id, nome: a.name, qtd_minima: a.min_qty, saldo: a.qty
   }))
+
+  const hasSufficientData = React.useMemo(() => {
+    const monthsCount = data?.period?.months?.length ?? 0
+    const consumoPoints = data?.series?.consumo_x_compras ?? []
+    const validConsumoMonths = consumoPoints.filter((p) => Number.isFinite(p?.consumo)).length
+    return monthsCount >= 3 && validConsumoMonths >= 3
+  }, [data])
 
   return (
       <div className="grid grid-cols-1 items-stretch gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
@@ -132,25 +140,36 @@ export function SectionCards({ tenantId }: Props) {
     </div>
   </div>
 
-  {/* ESTOQUE SEM MOVIMENTAÇÃO */}
-  <div
-    role="group"
-    aria-label="Saldo de estoque - indicadores"
-    className="flex flex-1 h-full items-center gap-4 mt-4 rounded-xl border border-rose-200/60 bg-rose-50 px-4 py-2 shadow-xs dark:border-rose-500/20 dark:bg-rose-950/40"
-  >
-    <IconAlertTriangle aria-hidden className="size-7 text-rose-600 dark:text-rose-400" />
-    <div className="flex w-full items-center gap-4">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-rose-800/80 d  ark:text-rose-200">Estoque sem Movimentação</p>
-        <p className="truncate text-lg font-semibold tabular-nums text-rose-950 dark:text-rose-50">
-           {saldoEstoque.toLocaleString("pt-BR",{
-            style: "currency",
-            currency: "BRL",
-          })}
-         </p>
+  <TooltipProvider delayDuration={100}>
+  <Tooltip>
+    <TooltipTrigger asChild>
+      {/* ESTOQUE SEM MOVIMENTAÇÃO */}
+      <div
+        role="group"
+        aria-label="Saldo de estoque - indicadores"
+        className="flex flex-1 h-full items-center gap-4 mt-4 rounded-xl border border-rose-200/60 bg-rose-50 px-4 py-2 shadow-xs dark:border-rose-500/20 dark:bg-rose-950/40 cursor-help"
+      >
+        <IconAlertTriangle aria-hidden className="size-7 text-rose-600 dark:text-rose-400" />
+        <div className="flex w-full items-center gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-rose-800/80 dark:text-rose-200">
+              Estoque sem Movimentação
+            </p>
+            <p className="truncate text-lg font-semibold tabular-nums text-rose-950 dark:text-rose-50">
+              {saldoEstoque.toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              })}
+            </p>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
+    </TooltipTrigger>
+    <TooltipContent side="top" align="center" className="text-sm dark:text-white">
+      Itens sem movimentação de estoque nos últimos 6 meses
+    </TooltipContent>
+  </Tooltip>
+</TooltipProvider>
 </div>
 
 <Card className="flex flex-col">
@@ -190,11 +209,13 @@ export function SectionCards({ tenantId }: Props) {
         </div>
       </CardContent>
       <CardFooter>
-      <div className="text-muted-foreground leading-none">
-          {getLabelFooter(value[0])}
+        <div className="text-muted-foreground leading-none">
+          {hasSufficientData
+            ? getLabelFooter(value[0])
+            : "Sem dados suficientes para calcular eficiência de compra"}
         </div>
       </CardFooter>
-    </Card>
+    </Card> 
 
       <ChartBarMonthlyBalance
         monthLabel={new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" }).format(new Date())}

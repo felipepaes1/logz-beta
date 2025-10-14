@@ -4,6 +4,8 @@ import { ItemGroupResource } from "../ItemGroup/item-group.resource";
 import { ManufacturerDto } from "../Manufacturer/manufacturer.dto";
 import { ManufacturerResource } from "../Manufacturer/manufacturer.resource";
 import { ItemResource } from "./item.resource";
+import { ProviderResource } from "../Provider/provider.resource";
+import { ProviderDto } from "../Provider/provider.dto";
 
 export class ItemDto extends BaseDTO {
     public active = true;
@@ -25,6 +27,11 @@ export class ItemDto extends BaseDTO {
 
     public itemResource: ItemResource;
 
+    public providerResource?: ProviderResource;
+    public providerDto?: ProviderDto;
+    public provider_id?: number;
+    public supplier?: string;
+
     public createFromColoquentResource(resource: ItemResource): ItemDto {
 
         if (!resource || typeof resource.getApiId !== "function") {
@@ -43,6 +50,12 @@ export class ItemDto extends BaseDTO {
         this.manufacturerResource = resource.getRelation('manufacturer');
         this.itemGroupResource = resource.getRelation('itemGroup');
         this.avatar = resource.getRelation('avatar');
+        this.providerResource = resource.getRelation?.('provider');
+        this.provider_id = Number(resource?.getAttribute?.('provider_id') ?? this.providerResource?.getApiId?.() ?? NaN) || undefined;
+        this.supplier =
+          (this.providerResource?.getAttribute?.('company_name') ??
+           this.providerResource?.getAttribute?.('name') ??
+           resource?.getAttribute?.('supplier')) || undefined;
         
         if (resource.getRelation('manufacturer')) {
             this.manufacturerDto = new ManufacturerDto().createFromColoquentResource(resource.getRelation('manufacturer'));

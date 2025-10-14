@@ -60,6 +60,7 @@ import {
   TabsContent
 } from "@/components/ui/tabs"
 import { GripVertical } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { IconChevronsLeft, IconChevronLeft, IconChevronRight, IconChevronsRight } from "@tabler/icons-react"
 
 export const schema = z.object({
@@ -115,11 +116,22 @@ function DraggableRow<T extends { id: number }>({
           </button>
         </TableCell>
       )}
-      {row.getVisibleCells().map((cell) => (
-        <TableCell key={cell.id}>
-          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-        </TableCell>
-      ))}
+      {row.getVisibleCells().map((cell) => {
+        const meta = (cell.column.columnDef.meta as any) || {}
+        const shouldTruncate = !!meta.truncate
+        const content = flexRender(cell.column.columnDef.cell, cell.getContext())
+        return (
+          <TableCell key={cell.id} className={cn(meta.className)} style={meta.style}>
+            {shouldTruncate ? (
+              <div className="truncate" title={typeof cell.getValue?.() === "string" ? (cell.getValue() as string) : undefined}>
+                {content}
+              </div>
+            ) : (
+              content
+            )}
+          </TableCell>
+        )
+      })}
     </TableRow>
   )
 }
@@ -252,11 +264,14 @@ export function DataTable<T extends { id: number }>({
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
                     {withDragHandle && <TableHead aria-hidden className="w-8 p-0" />}
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id} colSpan={header.colSpan}>
-                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-                      </TableHead>
-                    ))}
+                    {headerGroup.headers.map((header) => {
+                      const meta = (header.column.columnDef.meta as any) || {}
+                      return (
+                        <TableHead key={header.id} colSpan={header.colSpan} className={cn(meta.className)} style={meta.style}>
+                          {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      )
+                    })}
                   </TableRow>
                 ))}
               </TableHeader>

@@ -77,7 +77,7 @@ const chartConfig = {
   return (
       <Card>
         <CardHeader>
-          <CardTitle>Top 5 Consumo de Ferramentas</CardTitle>
+          <CardTitle>Top 5 Consumo por Ferramentas</CardTitle>
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig}>

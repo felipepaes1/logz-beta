@@ -13,6 +13,7 @@ import { Drawer } from "@/components/ui/drawer"
 import { IconDotsVertical } from "@tabler/icons-react"
 import { ItemResource } from "@/resources/Item/item.resource"
 import { ItemDto } from "@/resources/Item/item.dto"
+import type { ItemDto } from "@/resources/Item/item.dto"
 import { ManufacturerResource } from "@/resources/Manufacturer/manufacturer.resource"
 import { ItemGroupResource } from "@/resources/ItemGroup/item-group.resource"
 import type { Ferramenta } from "./types"
@@ -23,11 +24,12 @@ interface RowActionsProps {
   row: Ferramenta
   onRequestDelete: (row: Ferramenta) => void
   onSave: (dto: ItemDto) => void
+  onSaved?: () => void
   manufacturers: ManufacturerResource[]
   itemGroups: ItemGroupResource[]
 }
 
-export function RowActions({ row, onRequestDelete, onSave, manufacturers, itemGroups }: RowActionsProps) {
+export function RowActions({ row, onRequestDelete, onSave, onSaved, manufacturers, itemGroups }: RowActionsProps) {
   const [open, setOpen] = React.useState(false)
   const [menuOpen, setMenuOpen] = React.useState(false)
   
@@ -73,15 +75,18 @@ export function RowActions({ row, onRequestDelete, onSave, manufacturers, itemGr
             itemGroups={itemGroups}
             onRequestClose={() => setOpen(false)}    
             onSubmit={async (dto) => {
-            const p = ItemResource.createOrUpdate(dto.clone().bindToSave())
-            await toast.promise(p, {
-              loading: "Salvando ferramenta...",
-              success: "Ferramenta atualizada!",
-              error: "Erro ao salvar.",
-            })
-            onSave(dto) 
-            setOpen(false)
-          }}
+              const promise = ItemResource.createOrUpdate(dto.clone().bindToSave())
+              await toast.promise(promise, {
+                loading: "Salvando ferramenta...",
+                success: "Ferramenta atualizada!",
+                error: "Erro ao salvar.",
+              })
+
+              onSave(dto)
+
+              onSaved?.()
+              setOpen(false)
+            }}
         />
         ) : null}
       </Drawer>

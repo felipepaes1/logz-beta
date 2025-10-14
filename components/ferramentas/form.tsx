@@ -128,7 +128,7 @@ export function FerramentaForm({
         const data = resp?.getData?.() ?? resp?.data ?? []
         setProviders(data)
       })
-      .catch(() => {/* opcional: toast.error("Não foi possível carregar fornecedores") */})
+      .catch(() => {toast.error("Não foi possível carregar fornecedores")})
     return () => { mounted = false }
   }, [])
 
@@ -172,8 +172,13 @@ export function FerramentaForm({
         providerRsc.getAttribute?.("company_name") ??
         providerRsc.getAttribute?.("name") ??
         ""
-      ;(dto as any).supplier = supplierName
-      ;(dto as any).provider_id = Number(providerRsc.getApiId?.() ?? NaN) || undefined
+      dto.providerResource = providerRsc
+      dto.supplier = supplierName
+      dto.provider_id = Number(providerRsc.getApiId?.() ?? NaN) || undefined
+    } else {
+      dto.providerResource = undefined
+      dto.supplier = undefined
+      dto.provider_id = undefined
     }
 
     try {
