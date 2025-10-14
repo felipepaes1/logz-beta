@@ -35,7 +35,12 @@ export function SectionCards({ tenantId }: Props) {
 
       const now = new Date()
       const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-      const pct = res.cards.eficiencia_compra.por_mes[key] ?? 0
+      const monthsCount = res?.period?.months?.length ?? 0
+      const consumoPoints = res?.series?.consumo_x_compras ?? []
+      const validConsumoMonths = consumoPoints.filter((p: any) => Number.isFinite(p?.consumo)).length
+      const sufficient = monthsCount >= 3 && validConsumoMonths >= 3
+      const pctRaw = res.cards.eficiencia_compra.por_mes[key]
+      const pct = sufficient && Number.isFinite(pctRaw) ? Number(pctRaw) : 0
       setValue([pct])
     })()
     return () => { mounted = false }
@@ -75,6 +80,8 @@ export function SectionCards({ tenantId }: Props) {
     const validConsumoMonths = consumoPoints.filter((p) => Number.isFinite(p?.consumo)).length
     return monthsCount >= 3 && validConsumoMonths >= 3
   }, [data])
+
+  const displayValue = hasSufficientData ? (value?.[0] ?? 0) : 0
 
   return (
       <div className="grid grid-cols-1 items-stretch gap-4 px-4 lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
@@ -184,10 +191,10 @@ export function SectionCards({ tenantId }: Props) {
             min={0}
             max={120}
             step={1}
-            value={value}
+            value={[displayValue]}
             disabled
             className="w-full"
-            rangeClassName={getColor(value[0])}
+            rangeClassName={getColor(displayValue)}
             showMarkLabels
             marks={[
               { value: 70, variant: "line", className: "bg-red-800", label: "70%" },
@@ -203,8 +210,8 @@ export function SectionCards({ tenantId }: Props) {
           />
 
           <div className="text-center mt-4">
-            <span className="text-lg font-bold">{getLabel(value[0])}</span>
-            <span className="block text-sm">{value[0]}%</span>
+            <span className="text-lg font-bold">{getLabel(displayValue)}</span>
+            <span className="block text-sm">{displayValue}%</span>
           </div>
         </div>
       </CardContent>
