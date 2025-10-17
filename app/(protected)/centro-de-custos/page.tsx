@@ -68,7 +68,7 @@ export default function Page() {
           <RowActions
             row={row.original}
             onDelete={(id) => setRows((prev) => prev.filter((r) => r.id !== id))}
-            onSave={(dto) =>
+            onSave={(dto) => {
               setRows((prev) =>
                 prev.map((r) =>
                   r.id === Number(dto.id)
@@ -81,7 +81,8 @@ export default function Page() {
                     : r
                 )
               )
-            }
+              if (typeof window !== "undefined") window.location.reload()
+            }}
           />
         ),
       },

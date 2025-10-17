@@ -123,13 +123,18 @@ export default function Page() {
     return list
   }, [sortedRows])
 
+  // Keep a ref with the latest rows to avoid stale data in async handlers
+  const rowsRef = React.useRef<Ferramenta[]>([])
+  React.useEffect(() => {
+    rowsRef.current = rows
+  }, [rows])
+
   const handleTogglePreOrder = React.useCallback(
   (row: Ferramenta, checked: boolean) => {
     const optimistic = checked ? 1 : 0;
+    const beforeVal = rowsRef.current.find(r => r.id === row.id)?.preOrdered ?? row.preOrdered
 
-    setRows(prev =>
-      prev.map(r => (r.id === row.id ? { ...r, preOrdered: optimistic } : r))
-    );
+    setRows(prev => prev.map(r => (r.id === row.id ? { ...r, preOrdered: optimistic } : r)));
 
     const p = checked
       ? ItemResource.markAsPreOrdered([row.id])
@@ -142,9 +147,7 @@ export default function Page() {
     });
 
     p.catch(() => {
-      setRows(prev =>
-        prev.map(r => (r.id === row.id ? { ...r, preOrdered: row.preOrdered } : r))
-      );
+      setRows(prev => prev.map(r => (r.id === row.id ? { ...r, preOrdered: beforeVal } : r)));
     });
   },
   [setRows]
@@ -305,10 +308,8 @@ export default function Page() {
                         manufacturer: dto.manufacturerResource,
                         itemGroup: dto.itemGroupResource,
                         provider: dto.providerResource,
-                        preOrdered:
-                          Number(dto.itemResource?.getAttribute?.("pre_ordered") ??
-                          dto.itemResource?.getAttribute?.("pre-ordered") ??
-                          r.preOrdered),
+                        // Preserve current preOrdered status when editing other fields
+                        preOrdered: r.preOrdered,
                       }
                     : r
                 )
@@ -342,9 +343,7 @@ export default function Page() {
           success: "Ferramenta cadastrada!",
           error: "Erro ao salvar ferramenta.",
         })
-        return p.then(() => {
-          if (typeof window !== "undefined") window.location.reload()
-        })
+        return p
       }}
     />
   ), [manufacturers, itemGroups])

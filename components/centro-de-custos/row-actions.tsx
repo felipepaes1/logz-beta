@@ -52,8 +52,8 @@ export function RowActions({ row, onDelete, onSave }: RowActionsProps) {
           title="Editar Centro de Custo"
           resource={row.resource}
           onRequestClose={() => setOpen(false)}
-          onSubmit={(dto) => {
-            MachineResource.inviteOrUpdate(dto.clone().bindToSave())
+          onSubmit={async (dto) => {
+            await MachineResource.inviteOrUpdate(dto.clone().bindToSave())
             onSave(dto)
             setOpen(false)
           }}

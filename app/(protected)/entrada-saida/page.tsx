@@ -41,7 +41,7 @@ const allColumns: Record<string, ColumnDef<Movimento>> = {
       new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(row.original.data)),
   },
   codigo: { accessorKey: "codigo", header: "Código" },
-  ferramenta: { accessorKey: "ferramenta", header: "Ferramenta" },
+  ferramenta: { accessorKey: "ferramenta", header: "Ferramenta", meta: { className: "max-w-[240px]", truncate: true } },
   maquina: { accessorKey: "maquina", header: "Máquina" },
   responsavel: { accessorKey: "responsavel", header: "Responsável" },
   operacao: { accessorKey: "operacao", header: "Operação" },
@@ -190,7 +190,7 @@ export default function Page() {
               setJustification("")
               setDeleteOpen(true)
             }}
-            onSave={() => reload()}
+            onSave={() => { if (typeof window !== "undefined") window.location.reload() }}
           />
         ),
       } as ColumnDef<Movimento>,
@@ -242,6 +242,7 @@ export default function Page() {
         await Promise.all([reload(), reloadItems()])
         setIsEntradaOpen(false)
         setIsSaidaOpen(false)
+        if (typeof window !== "undefined") window.location.reload()
       }),
       {
         loading: "Salvando registro...",

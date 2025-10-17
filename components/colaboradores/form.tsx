@@ -24,6 +24,7 @@ interface Props {
 }
 
 export function ColaboradorForm({ onSubmit, resource, title, onRequestClose }: Props) {
+  const isEditing = !!resource
   const [active, setActive] = React.useState(
     resource?.getAttribute("active") ?? true
   )
@@ -46,6 +47,11 @@ export function ColaboradorForm({ onSubmit, resource, title, onRequestClose }: P
     if (!codigo.trim()) newErrors.codigo = "Campo obrigatório"
     if (!senha.trim()) newErrors.senha = "Campo obrigatório"
 
+    // On edit, password is optional; if left blank, ignore its error
+    if (isEditing && !senha.trim()) {
+      delete newErrors.senha
+    }
+
     if (Object.keys(newErrors).length) {
       setErrors(newErrors)
       return
@@ -57,13 +63,17 @@ export function ColaboradorForm({ onSubmit, resource, title, onRequestClose }: P
     dto.name = nome
     dto.code = codigo
     dto.active = active
-    dto.password = senha
+    if (senha.trim()) {
+      dto.password = senha
+    }
 
     try {
       setSubmitting(true)
       await onSubmit(dto)
       form.reset()
-      setActive(true)
+      if (!isEditing) {
+        setActive(true)
+      }
       onRequestClose?.()
     } finally {
       setSubmitting(false)
@@ -116,13 +126,13 @@ export function ColaboradorForm({ onSubmit, resource, title, onRequestClose }: P
 
 
           <div className="flex flex-col gap-1">
-            <Label htmlFor="senha">Senha</Label>
+            <Label htmlFor="senha">Senha {isEditing ? "(opcional)" : ""}</Label>
             <Input
               id="senha"
               name="senha"
               type="password"
               autoComplete="new-password"
-              placeholder="Defina uma senha para o colaborador"
+              placeholder={isEditing ? "Deixe em branco para manter" : "Senha do colaborador no aplicativo"}
               className={cn(errors.senha && "border-destructive")}
               aria-invalid={!!errors.senha}
               aria-describedby={errors.senha ? "senha-erro" : undefined}
