@@ -123,7 +123,6 @@ export default function Page() {
     return list
   }, [sortedRows])
 
-  // Keep a ref with the latest rows to avoid stale data in async handlers
   const rowsRef = React.useRef<Ferramenta[]>([])
   React.useEffect(() => {
     rowsRef.current = rows

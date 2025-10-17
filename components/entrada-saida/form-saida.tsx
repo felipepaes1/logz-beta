@@ -324,6 +324,7 @@ export function SaidaForm({
                 placeholder="0"
                 aria-label="Quantidade"
                 value={quantity}
+                disabled={!!disableEdition}
                 onChange={(e) => {
                   let v = e.target.value.replace(/\D/g, "")
                   v = v.replace(/^0+(?=\d)/, "")
@@ -336,6 +337,11 @@ export function SaidaForm({
                 }}
                 className={cn(errors.quantity && "border-destructive")}
               />
+              {disableEdition && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Para alterar a quantidade de uma saída, exclua o registro e crie uma nova saída.
+                </div>
+              )}
               {item && typeof availableQty === "number" && (
                 <div className="text-xs text-muted-foreground mt-1" role="status" aria-live="polite">
                   Quantidade disponível:{" "}
