@@ -47,6 +47,7 @@ interface FerramentaFormProps {
   itemGroups: ItemGroupResource[]
   title: string
   onRequestClose?: () => void
+  provider?: ProviderResource | null
 }
 
 export function FerramentaForm({
@@ -55,7 +56,8 @@ export function FerramentaForm({
   manufacturers,
   itemGroups,
   title,
-  onRequestClose
+  onRequestClose,
+  provider: initialProvider
 }: FerramentaFormProps) {
   const [active, setActive] = React.useState(
     resource?.getAttribute("active") ?? true
@@ -131,6 +133,16 @@ export function FerramentaForm({
       .catch(() => {toast.error("Não foi possível carregar fornecedores")})
     return () => { mounted = false }
   }, [])
+
+  // Keep provider select in sync when editing with updated provider
+  React.useEffect(() => {
+    const nextId =
+      initialProvider?.getApiId?.()?.toString?.() ??
+      resource?.getRelation?.("provider")?.getApiId?.()?.toString?.() ??
+      resource?.getAttribute?.("provider_id")?.toString?.() ??
+      ""
+    setProviderId(nextId)
+  }, [resource, initialProvider])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()

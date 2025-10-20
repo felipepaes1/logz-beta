@@ -52,9 +52,11 @@ export function RowActions({ row, onSave }: RowActionsProps) {
           resource={row.resource}
           onRequestClose={() => setOpen(false)}
           onSubmit={(dto) => {
-            CollaboratorResource.inviteOrUpdate(dto.clone().bindToSave())
-            onSave(dto)
-            setOpen(false)
+            const p = CollaboratorResource.inviteOrUpdate(dto.clone().bindToSave())
+            return p.then(() => {
+              onSave(dto)
+              setOpen(false)
+            })
           }}
         />
       </Drawer>

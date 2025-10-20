@@ -70,6 +70,7 @@ export function RowActions({ row, onRequestDelete, onSave, onSaved, manufacturer
           <FerramentaForm
             title="Editar Ferramenta"
             resource={row.resource}
+            provider={row.provider}
             manufacturers={manufacturers}
             itemGroups={itemGroups}
             onRequestClose={() => setOpen(false)}    
