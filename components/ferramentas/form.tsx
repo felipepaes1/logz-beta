@@ -38,7 +38,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { ProviderResource } from "@/resources/Provider/provider.resource"
-import { ProviderDto } from "@/resources/Provider/provider.dto"
 
 interface FerramentaFormProps {
   onSubmit: (dto: ItemDto) => Promise<unknown>
@@ -175,7 +174,8 @@ export function FerramentaForm({
     dto.code = codigo
     dto.active = active
     dto.description = nome
-    dto.min_quantity = Number(data.get("estoqueMinimo") || 0)
+    const minQuantityValue = Number(data.get("estoqueMinimo") || 0)
+    dto.min_quantity = minQuantityValue
     // Preserve current estoque (quantity) when editing; only initialize on create
     dto.quantity = resource?.getAttribute?.("quantity") ?? 0
     dto.manufacturerResource = manufacturerRsc
@@ -194,12 +194,42 @@ export function FerramentaForm({
       dto.provider_id = undefined
     }
 
+    if (resource) {
+      const updatedResource = resource.clone?.() ?? resource
+      updatedResource.setAttribute?.("name", nome)
+      updatedResource.setAttribute?.("code", codigo)
+      updatedResource.setAttribute?.("active", active)
+      updatedResource.setAttribute?.("description", nome)
+      updatedResource.setAttribute?.("min_quantity", dto.min_quantity)
+      updatedResource.setAttribute?.("quantity", dto.quantity)
+      updatedResource.setRelation?.("manufacturer", manufacturerRsc ?? null)
+      updatedResource.setRelation?.("itemGroup", itemGroupRsc ?? null)
+      if (providerRsc) {
+        updatedResource.setRelation?.("provider", providerRsc)
+        updatedResource.setAttribute?.("supplier", dto.supplier ?? "")
+        updatedResource.setAttribute?.("provider_id", dto.provider_id ?? null)
+      } else {
+        updatedResource.setRelation?.("provider", null)
+        updatedResource.setAttribute?.("supplier", null)
+        updatedResource.setAttribute?.("provider_id", null)
+      }
+      dto.itemResource = updatedResource
+    }
+
     try {
       setSubmitting(true)
       await onSubmit(dto)
-      form.reset()
-      setActive(true)
-      setProviderId("")
+
+      if (!resource) {
+        form.reset()
+        setActive(true)
+        setProviderId("")
+        if (typeof window !== "undefined") {
+          window.location.reload()
+        }
+        return
+      }
+
       onRequestClose?.()
     } finally {
       setSubmitting(false)
@@ -554,3 +584,5 @@ export function FerramentaForm({
     </DrawerContent>
   )
 }
+
+

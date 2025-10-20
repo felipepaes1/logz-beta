@@ -81,8 +81,19 @@ export class ItemDto extends BaseDTO {
             this.itemGroupDto = new ItemGroupDto().createFromColoquentResource(this.itemGroupResource);
         }
 
-        this.manufacturerDto.bindToSave();
-        this.itemGroupDto.bindToSave();
+        if (this.providerResource) {
+            this.providerDto = new ProviderDto().createFromColoquentResource(this.providerResource);
+        } else if (this.provider_id) {
+            const providerDto = new ProviderDto();
+            providerDto.id = this.provider_id;
+            this.providerDto = providerDto;
+        } else {
+            this.providerDto = undefined;
+        }
+
+        this.manufacturerDto?.bindToSave?.();
+        this.itemGroupDto?.bindToSave?.();
+        this.providerDto?.bindToSave?.();
 
         return this;
     }
