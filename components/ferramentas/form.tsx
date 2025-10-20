@@ -164,7 +164,8 @@ export function FerramentaForm({
     dto.active = active
     dto.description = nome
     dto.min_quantity = Number(data.get("estoqueMinimo") || 0)
-    dto.quantity = 0
+    // Preserve current estoque (quantity) when editing; only initialize on create
+    dto.quantity = resource?.getAttribute?.("quantity") ?? 0
     dto.manufacturerResource = manufacturerRsc
     dto.itemGroupResource = itemGroupRsc
     if (providerRsc) {
