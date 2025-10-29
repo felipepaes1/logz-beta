@@ -61,7 +61,11 @@ export default function Page() {
       .get()
       .then((resp: PluralResponse<ProviderResource>) => {
         const data = resp.getData()
-        const mapped: Fornecedor[] = data.map((r) => {
+        const active = data.filter((r) => {
+          const deletedAt = r.getAttribute?.("deleted_at")
+          return deletedAt === null || deletedAt === undefined
+        })
+        const mapped: Fornecedor[] = active.map((r) => {
           const dto = new ProviderDto().createFromColoquentResource(r)
           return {
             id: Number(r.getApiId()),
