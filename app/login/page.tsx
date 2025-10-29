@@ -72,7 +72,7 @@ export default function LoginPage() {
       <Image
         src={heroMock}
         alt="Aplicativo LogZ em notebook e celular"
-        className="w-1/2 max-w-xs object-contain"
+        className="w-1/2 max-w-s object-contain"
         priority
       />
       <Carousel

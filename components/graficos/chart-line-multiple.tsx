@@ -28,6 +28,18 @@ function toMonthLabel(ym: string) {
   return new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(d)
 }
 
+function periodToMonthDate(value?: string | null) {
+  if (!value) return null
+  const sanitized = value.slice(0, 7)
+  const [yearStr, monthStr] = sanitized.split("-")
+  if (!yearStr || !monthStr) return null
+  const year = Number(yearStr)
+  const month = Number(monthStr)
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return null
+  if (month < 1 || month > 12) return null
+  return new Date(year, month - 1, 1)
+}
+
 const chartConfig = {
   Consumido: {
     label: "Consumido",
@@ -43,7 +55,7 @@ const chartConfig = {
 const brl = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
-  maximumFractionDigits: 0,
+  maximumFractionDigits: 2,
 })
 const formatBRL = (v: number) => brl.format(v ?? 0)
 
@@ -74,16 +86,41 @@ export function ChartLineMultiple() {
     try {
       const res = await DashboardPanoramaResource.panorama(params)
       const parsed = res as unknown as PanoramaLite
+      const now = new Date()
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-      const data = (parsed.series.consumo_x_compras ?? []).map(p => ({
-        month: toMonthLabel(p.period),
-        Consumido: p.consumo,
-        Comprado: p.compra,
-      }))
+      const filteredSeries = (parsed.series.consumo_x_compras ?? [])
+        .slice()
+        .filter((point) => {
+          const periodDate = periodToMonthDate(point.period)
+          if (!periodDate) return true
+          return periodDate <= currentMonthStart
+        })
+        .sort((a, b) => (a.period < b.period ? -1 : a.period > b.period ? 1 : 0))
+
+      const data = filteredSeries.map((p) => ({
+          month: toMonthLabel(p.period),
+          Consumido: p.consumo,
+          Comprado: p.compra,
+        }))
+
       if (myId !== requestIdRef.current) return
       setRows(data)
-      const months = parsed.period.months
-      setRange(months?.length ? `${months[0]} - ${months.at(-1)}` : "")
+
+      const months = (parsed.period.months ?? []).filter((month) => {
+        const periodDate = periodToMonthDate(month)
+        if (!periodDate) return true
+        return periodDate <= currentMonthStart
+      })
+      if (months.length) {
+        setRange(`${months[0]} - ${months[months.length - 1]}`)
+      } else if (filteredSeries.length) {
+        const firstPeriod = filteredSeries[0]?.period
+        const lastPeriod = filteredSeries[filteredSeries.length - 1]?.period
+        setRange(firstPeriod && lastPeriod ? `${firstPeriod} - ${lastPeriod}` : firstPeriod ?? "")
+      } else {
+        setRange("")
+      }
     } catch (e: any) {
       console.error(e)
       if (myId === requestIdRef.current) toast.error("Falha ao carregar panorama")
