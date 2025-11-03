@@ -52,7 +52,7 @@ export default function Page() {
 
 
   React.useEffect(() => {
-    ItemResource.with(["manufacturer", "itemGroup", "provider"]).get().then((response: PluralResponse<ItemResource>) => {
+    ItemResource.with(["manufacturer", "itemGroup" ]).get().then((response: PluralResponse<ItemResource>) => {
       setItems(response.getData())
     })
     ManufacturerResource.get().then((response: PluralResponse<ManufacturerResource>) => {
