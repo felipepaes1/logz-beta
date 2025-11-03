@@ -28,8 +28,13 @@ const chartConfig = {
 } satisfies ChartConfig
 
 
-  const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })
-  const fmt = (n: number) => brl.format(n ?? 0)
+const brl = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const fmt = (n: number) => brl.format(Number.isFinite(n) ? n : 0);
 
   const NAME_MAX_CHARS = 30
   const ellipsize = (s: string, max = NAME_MAX_CHARS) =>

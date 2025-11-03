@@ -21,6 +21,31 @@ import { ChartBarMonthlyBalance } from "@/components/graficos/chart-bar-monthly-
 import { DashboardPanoramaResource, type DashboardPanoramaAttributes } from "@/resources/Dashboard/dashboard.resource"
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 
+type ConsumoCompraPoint = { period?: string | null; consumo?: number; compra?: number }
+
+function periodToMonthDate(value?: string | null) {
+  if (!value) return null
+  const sanitized = value.slice(0, 7)
+  const [yearStr, monthStr] = sanitized.split("-")
+  if (!yearStr || !monthStr) return null
+  const year = Number(yearStr)
+  const month = Number(monthStr)
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return null
+  if (month < 1 || month > 12) return null
+  return new Date(year, month - 1, 1)
+}
+
+function getClosedMonthsPoints(series: ConsumoCompraPoint[] | undefined, currentMonthStart: Date) {
+  return (Array.isArray(series) ? series : [])
+    .map((point) => ({
+      consumo: Number(point?.consumo ?? 0),
+      compra: Number(point?.compra ?? 0),
+      periodDate: periodToMonthDate(point?.period ?? null),
+    }))
+    .filter((point) => point.periodDate && point.periodDate < currentMonthStart && Number.isFinite(point.consumo) && Number.isFinite(point.compra))
+    .sort((a, b) => (a.periodDate!.getTime() - b.periodDate!.getTime()))
+}
+
 type Props = { tenantId: number }
 export function SectionCards({ tenantId }: Props) {
   const [data, setData] = React.useState<DashboardPanoramaAttributes | null>(null)
@@ -34,14 +59,18 @@ export function SectionCards({ tenantId }: Props) {
       setData(res)
 
       const now = new Date()
-      const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`
-      const monthsCount = res?.period?.months?.length ?? 0
-      const consumoPoints = res?.series?.consumo_x_compras ?? []
-      const validConsumoMonths = consumoPoints.filter((p: any) => Number.isFinite(p?.consumo)).length
-      const sufficient = monthsCount >= 3 && validConsumoMonths >= 3
-      const pctRaw = res.cards.eficiencia_compra.por_mes[key]
-      const pct = sufficient && Number.isFinite(pctRaw) ? Number(pctRaw) : 0
-      setValue([pct])
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const closedPoints = getClosedMonthsPoints(res?.series?.consumo_x_compras, currentMonthStart)
+      if (closedPoints.length >= 3) {
+        const lastThree = closedPoints.slice(-3)
+        const totalConsumo = lastThree.reduce((acc, point) => acc + point.consumo, 0)
+        const totalCompra = lastThree.reduce((acc, point) => acc + point.compra, 0)
+        const pct = totalCompra > 0 ? (totalConsumo / totalCompra) * 100 : 0
+        const rounded = Number.isFinite(pct) ? Math.round(pct * 10) / 10 : 0
+        setValue([rounded])
+      } else {
+        setValue([0])
+      }
     })()
     return () => { mounted = false }
   }, [tenantId])
@@ -75,10 +104,11 @@ export function SectionCards({ tenantId }: Props) {
   }))
 
   const hasSufficientData = React.useMemo(() => {
-    const monthsCount = data?.period?.months?.length ?? 0
-    const consumoPoints = data?.series?.consumo_x_compras ?? []
-    const validConsumoMonths = consumoPoints.filter((p) => Number.isFinite(p?.consumo)).length
-    return monthsCount >= 3 && validConsumoMonths >= 3
+    if (!data) return false
+    const now = new Date()
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    const closedPoints = getClosedMonthsPoints(data?.series?.consumo_x_compras, currentMonthStart)
+    return closedPoints.length >= 3
   }, [data])
 
   const displayValue = hasSufficientData ? (value?.[0] ?? 0) : 0
@@ -218,7 +248,7 @@ export function SectionCards({ tenantId }: Props) {
       <CardFooter>
         <div className="text-muted-foreground leading-none">
           {hasSufficientData
-            ? getLabelFooter(value[0])
+            ? getLabelFooter(displayValue)
             : "Sem dados suficientes para calcular eficiência de compra"}
         </div>
       </CardFooter>

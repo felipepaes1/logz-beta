@@ -51,13 +51,19 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-
 const brl = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
   maximumFractionDigits: 2,
 })
 const formatBRL = (v: number) => brl.format(v ?? 0)
+
+const formatBRLCompact = (v: number) => {
+  const valueInThousands = v / 1000
+  return `R$ ${valueInThousands.toLocaleString("pt-BR", {
+    maximumFractionDigits: valueInThousands % 1 === 0 ? 0 : 1, // arredonda se for inteiro
+  })} mil`
+}
 
 type SeriesPoint = { period: string; consumo: number; compra: number }
 type PanoramaLite = {
@@ -88,15 +94,21 @@ export function ChartLineMultiple() {
       const parsed = res as unknown as PanoramaLite
       const now = new Date()
       const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const startOfYear = new Date(now.getFullYear(), 0, 1)
 
       const filteredSeries = (parsed.series.consumo_x_compras ?? [])
-        .slice()
+        .map((point) => ({
+          ...point,
+          periodDate: periodToMonthDate(point.period),
+        }))
         .filter((point) => {
-          const periodDate = periodToMonthDate(point.period)
-          if (!periodDate) return true
-          return periodDate <= currentMonthStart
+          if (!point.periodDate) return false
+          return (
+            point.periodDate >= startOfYear &&
+            point.periodDate <= currentMonthStart
+          )
         })
-        .sort((a, b) => (a.period < b.period ? -1 : a.period > b.period ? 1 : 0))
+        .sort((a, b) => (a.periodDate!.getTime() - b.periodDate!.getTime()))
 
       const data = filteredSeries.map((p) => ({
           month: toMonthLabel(p.period),
@@ -109,8 +121,11 @@ export function ChartLineMultiple() {
 
       const months = (parsed.period.months ?? []).filter((month) => {
         const periodDate = periodToMonthDate(month)
-        if (!periodDate) return true
-        return periodDate <= currentMonthStart
+        if (!periodDate) return false
+        return (
+          periodDate >= startOfYear &&
+          periodDate <= currentMonthStart
+        )
       })
       if (months.length) {
         setRange(`${months[0]} - ${months[months.length - 1]}`)
@@ -195,7 +210,7 @@ export function ChartLineMultiple() {
               axisLine={false}
               tickMargin={8}
               width={64}
-              tickFormatter={(v) => formatBRL(Number(v))}
+              tickFormatter={(v) => formatBRLCompact(Number(v))}
             />
 
             <Tooltip cursor={false} content={<CustomTooltip />} />
@@ -203,7 +218,7 @@ export function ChartLineMultiple() {
             <Line
               dataKey="Consumido"
               name="Consumido"
-              type="monotone"
+              type="linear"
               stroke="var(--color-Consumido)"
               strokeWidth={2}
               dot
@@ -212,7 +227,7 @@ export function ChartLineMultiple() {
             <Line
               dataKey="Comprado"
               name="Comprado"
-              type="monotone"
+              type="linear"
               stroke="var(--color-Comprado)"
               strokeWidth={2}
               dot

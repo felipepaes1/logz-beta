@@ -6,10 +6,18 @@ export class DashboardPanoramaResource extends BaseResource {
 
   private static _inflight = new Map<string, Promise<DashboardPanoramaAttributes>>();
   private static _cache = new Map<string, { exp: number; data: DashboardPanoramaAttributes }>();
-  private static _ttlMs = 30_000;
+  private static _defaultTtlMs = 2_000;
 
   private static _key(params?: { date_from?: string | null; date_to?: string | null }) {
     return JSON.stringify(params ?? {});
+  }
+
+  private static _resolveTtlMs(): number {
+    const raw = process.env.NEXT_PUBLIC_DASHBOARD_CACHE_TTL_MS;
+    if (!raw || raw.trim() === "") return this._defaultTtlMs;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed < 0) return this._defaultTtlMs;
+    return parsed;
   }
 
   public static clearCache() {
@@ -21,7 +29,8 @@ export class DashboardPanoramaResource extends BaseResource {
     const uri = (this as any).jsonApiType + "/panorama";
     const key = this._key(params);
 
-    const cached = this._cache.get(key);
+    const ttlMs = this._resolveTtlMs();
+    const cached = ttlMs > 0 ? this._cache.get(key) : undefined;
     const now = Date.now();
     if (cached && cached.exp > now) return cached.data;
 
@@ -32,7 +41,11 @@ export class DashboardPanoramaResource extends BaseResource {
       const response = await this.getHttpClient().get(uri, params);
       const data = (response as any)?.axiosResponse?.data;
       const attributes = (data?.data?.attributes ?? data?.attributes ?? data) as DashboardPanoramaAttributes;
-      this._cache.set(key, { exp: now + this._ttlMs, data: attributes });
+      if (ttlMs > 0) {
+        this._cache.set(key, { exp: Date.now() + ttlMs, data: attributes });
+      } else {
+        this._cache.delete(key);
+      }
       this._inflight.delete(key);
       return attributes;
     })().catch((e) => {
