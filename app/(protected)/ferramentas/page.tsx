@@ -330,6 +330,26 @@ export default function Page() {
     requestDelete
   ])
 
+  const searchableColumns = React.useMemo(
+    () => {
+      const base = [
+        { id: "nome", label: "Nome" },
+        { id: "codigo", label: "Codigo" },
+        { id: "fabricante", label: "Fabricante" },
+        { id: "fornecedor", label: "Fornecedor" },
+      ]
+      if (tab === "alertas") {
+        return base
+      }
+      return [
+        ...base,
+        { id: "grupo", label: "Grupo" },
+        { id: "status", label: "Status" },
+      ]
+    },
+    [tab]
+  )
+
   const form = React.useMemo(() => (
     <FerramentaForm
       title="Nova Ferramenta"
@@ -434,7 +454,8 @@ export default function Page() {
                 addButtonLabel="Nova Ferramenta"
                 renderAddForm={form}
                 isLoading={isLoading}
-                
+                searchableColumns={searchableColumns}
+                searchPlaceholder="Buscar ferramenta por nome, código, fabricante ou fornecedor"
               />
             </TabsContent>
 
@@ -447,7 +468,8 @@ export default function Page() {
                 addButtonLabel="Nova Ferramenta"
                 renderAddForm={form}
                 isLoading={isLoading}
-                
+                searchableColumns={searchableColumns}
+                searchPlaceholder="Buscar ferramenta por nome, código, fabricante, fornecedor ou status"
               />
             </TabsContent>
 

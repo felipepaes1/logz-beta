@@ -35,6 +35,12 @@ const chartData = monthKeys.map((m) => ({
   valor: tools.reduce((acc, t) => acc + t[m], 0),
 }))
 
+const searchableColumns: Array<{ id: keyof Ferramenta | string; label?: string }> = [
+  { id: "nome", label: "Nome da Ferramenta" },
+  { id: "codigo", label: "Codigo" },
+  { id: "total", label: "Total" },
+]
+
 export default function FerramentasOverview() {
   return (
     <section className="flex flex-col gap-6 p-6">
@@ -77,7 +83,12 @@ export default function FerramentasOverview() {
           </AreaChart>
         </ResponsiveContainer>
       </div>
-      <DataTable<Ferramenta> data={tools} columns={toolColumns} />
+      <DataTable<Ferramenta>
+        data={tools}
+        columns={toolColumns}
+        searchableColumns={searchableColumns}
+        searchPlaceholder="Buscar ferramenta por nome, código ou total"
+      />
     </section>
   )
 }

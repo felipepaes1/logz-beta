@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { DataTable } from "@/components/data-table"
 import { IconArrowUp, IconArrowDown } from "@tabler/icons-react"
@@ -47,7 +47,7 @@ const allColumns: Record<string, ColumnDef<Movimento>> = {
   operacao: { accessorKey: "operacao", header: "Operação" },
   precoUnitario: {
     accessorKey: "precoUnitario",
-    header: "Preço unitário",
+    header: "Preço Unitário",
     cell: ({ row }) =>
       row.original.precoUnitario
         ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" })
@@ -63,7 +63,7 @@ const allColumns: Record<string, ColumnDef<Movimento>> = {
             .format(row.original.precoTotal)
         : "",
   },
-  ordem: { accessorKey: "ordem", header: "Ordem" }, // em ENTRADAS mudamos o header dinamicamente
+  ordem: { accessorKey: "ordem", header: "Ordem" },
   quantidade: { accessorKey: "quantidade", header: "Quantidade" },
 }
 
@@ -108,6 +108,10 @@ export default function Page() {
   const [justification, setJustification] = React.useState("")
   const focusRestoreRef = React.useRef<HTMLButtonElement>(null)
   const JUST_MIN = 12
+  const dateFormatter = React.useMemo(
+    () => new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }),
+    []
+  )
 
   const reload = React.useCallback(() => {
     setIsLoading(true)
@@ -236,6 +240,75 @@ export default function Page() {
     return withActions(todosCols)
   }, [tab, itemGroups, items, collaborators, machines, pcps, reload])
 
+  const searchColumnsTodos = React.useMemo(
+    () => [
+      {
+        id: "data",
+        label: "Data",
+        getValue: (row: Movimento) => {
+          if (!row?.data) return ""
+          try {
+            return dateFormatter.format(new Date(row.data))
+          } catch {
+            return row.data
+          }
+        },
+      },
+      { id: "codigo", label: "Codigo" },
+      { id: "ferramenta", label: "Ferramenta" },
+      { id: "maquina", label: "Maquina" },
+      { id: "responsavel", label: "Responsavel" },
+      { id: "operacao", label: "Operacao" },
+    ],
+    [dateFormatter]
+  )
+
+  const searchColumnsEntradas = React.useMemo(
+    () => [
+      {
+        id: "data",
+        label: "Data",
+        getValue: (row: Movimento) => {
+          if (!row?.data) return ""
+          try {
+            return dateFormatter.format(new Date(row.data))
+          } catch {
+            return row.data
+          }
+        },
+      },
+      { id: "codigo", label: "Codigo" },
+      { id: "ferramenta", label: "Ferramenta" },
+      { id: "responsavel", label: "Responsavel" },
+      { id: "ordem", label: "Ordem de Compra" },
+      { id: "quantidade", label: "Quantidade" },
+    ],
+    [dateFormatter]
+  )
+
+  const searchColumnsSaidas = React.useMemo(
+    () => [
+      {
+        id: "data",
+        label: "Data",
+        getValue: (row: Movimento) => {
+          if (!row?.data) return ""
+          try {
+            return dateFormatter.format(new Date(row.data))
+          } catch {
+            return row.data
+          }
+        },
+      },
+      { id: "codigo", label: "Codigo" },
+      { id: "ferramenta", label: "Ferramenta" },
+      { id: "responsavel", label: "Responsavel" },
+      { id: "maquina", label: "Maquina" },
+      { id: "quantidade", label: "Quantidade" },
+    ],
+    [dateFormatter]
+  )
+
   function saveWithToast(dto: ComponentDto) {
     return toast.promise(
       ComponentResource.createOrUpdate(dto.clone().bindToSave()).then(async () => {
@@ -357,6 +430,8 @@ export default function Page() {
                 columns={columns}
                 headerActions={headerActions}
                 isLoading={isLoading}
+                searchableColumns={searchColumnsTodos}
+                searchPlaceholder="Buscar movimento por data, código, ferramenta, responsável ou máquina"
               />
             </TabsContent>
 
@@ -368,6 +443,8 @@ export default function Page() {
                 columns={columns}
                 headerActions={headerActions}
                 isLoading={isLoading}
+                searchableColumns={searchColumnsEntradas}
+                searchPlaceholder="Buscar entrada por data, código, ferramenta, responsável ou ordem"
               />
             </TabsContent>
 
@@ -379,6 +456,8 @@ export default function Page() {
                 columns={columns}
                 headerActions={headerActions}
                 isLoading={isLoading}
+                searchableColumns={searchColumnsSaidas}
+                searchPlaceholder="Buscar entrada por data, código, ferramenta, responsável ou máquina"
               />
             </TabsContent>
           </Tabs>
@@ -404,13 +483,13 @@ export default function Page() {
               </AlertDialogHeader>
               <div className="grid gap-2">
                 <label htmlFor="justification" className="text-sm font-medium">
-                  Justificativa <span className="text-muted-foreground">(mín. {JUST_MIN} caracteres)</span>
+                  Justificativa <span className="text-muted-foreground">(mínimo {JUST_MIN} caracteres)</span>
                 </label>
                 <Textarea
                   id="justification"
                   value={justification}
                   onChange={(e) => setJustification(e.target.value)}
-                  placeholder="Ex.: Lançamento duplicado; corrigido pelo movimento XYZ..."
+                  placeholder="Ex.: Lançamento duplicado; corrigido pelo movimento..."
                   rows={4}
                 />
                 {justification.trim().length > 0 && justification.trim().length < JUST_MIN && (

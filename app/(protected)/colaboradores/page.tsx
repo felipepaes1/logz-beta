@@ -79,6 +79,15 @@ export default function Page() {
     []
   )
 
+  const searchableColumns = React.useMemo(
+    () => [
+      { id: "nome", label: "Nome" },
+      { id: "codigo", label: "Codigo" },
+      { id: "status", label: "Status" },
+    ],
+    []
+  )
+
   const form = (
     <ColaboradorForm
       title="Novo Colaborador"
@@ -109,7 +118,8 @@ export default function Page() {
             addButtonLabel="Novo Colaborador"
             renderAddForm={form}
             isLoading={isLoading}
-            
+            searchableColumns={searchableColumns}
+            searchPlaceholder="Buscar colaborador por nome, código ou status"
           />
         </div>
       </div>

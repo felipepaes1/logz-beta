@@ -204,6 +204,18 @@ export default function Page() {
     [rows, requestDelete]
   )
 
+  const searchableColumns = React.useMemo(
+    () => [
+      { id: "empresa", label: "Empresa" },
+      { id: "vendedor", label: "Vendedor" },
+      { id: "email", label: "Email" },
+      { id: "telefone", label: "Telefone" },
+      { id: "prazo", label: "Prazo" },
+      { id: "observacoes", label: "Observacoes" },
+    ],
+    []
+  )
+
   const form = (
     <FornecedorForm
       title="Novo Fornecedor"
@@ -270,6 +282,8 @@ export default function Page() {
             renderAddForm={form}
             isLoading={isLoading}
             emptyMessage="Nenhum fornecedor encontrado"
+            searchableColumns={searchableColumns}
+            searchPlaceholder="Buscar fornecedor por empresa, vendedor, email, telefone ou prazo"
           />
           <AlertDialog
             open={deleteOpen}

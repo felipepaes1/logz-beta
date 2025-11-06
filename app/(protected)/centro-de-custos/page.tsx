@@ -90,6 +90,16 @@ export default function Page() {
     [setRows]
   )
 
+  const searchableColumns = React.useMemo(
+    () => [
+      { id: "descricao", label: "Nome" },
+      { id: "modelo", label: "Modelo" },
+      { id: "codigo", label: "Codigo" },
+      { id: "status", label: "Status" },
+    ],
+    []
+  )
+
   const form = (
   <CentroCustoForm
     title="Novo Centro de Custo"
@@ -120,6 +130,8 @@ export default function Page() {
             addButtonLabel="Novo Centro de Custo"
             renderAddForm={form}
             isLoading={isLoading}
+            searchableColumns={searchableColumns}
+            searchPlaceholder="Buscar centro de custo por nome, modelo, código ou status"
           />
         </div>
       </div>
