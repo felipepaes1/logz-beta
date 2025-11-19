@@ -327,11 +327,9 @@ export function SaidaForm({
     <DrawerContent
       onPointerDownOutside={(e) => {
         e.preventDefault()
-        onRequestClose?.()
       }}
       onEscapeKeyDown={(e) => {
         e.preventDefault()
-        onRequestClose?.()
       }}
     >
       <DrawerHeader>

@@ -204,7 +204,6 @@ export function EntradaForm({
 
   function handleUnitKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     const key = e.key
-    // dígitos 0-9
     if (/^\d$/.test(key)) {
       e.preventDefault()
       const digit = Number(key)
@@ -312,11 +311,9 @@ export function EntradaForm({
     <DrawerContent
       onPointerDownOutside={(e) => {
         e.preventDefault()
-        onRequestClose?.()
       }}
       onEscapeKeyDown={(e) => {
         e.preventDefault()
-        onRequestClose?.()
       }}
     >
       <DrawerHeader>
