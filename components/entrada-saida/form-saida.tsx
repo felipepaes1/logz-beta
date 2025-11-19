@@ -16,7 +16,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import { ComponentResource } from "@/resources/Component/component.resource"
 import { ComponentDto } from "@/resources/Component/component.dto"
@@ -27,6 +26,13 @@ import { CollaboratorResource } from "@/resources/Collaborator/collaborator.reso
 import { MachineResource } from "@/resources/Machine/machine.resource"
 import { PcpResource } from "@/resources/Pcp/pcp.resource"
 import { cn } from "@/lib/utils"
+import {
+  SelectDisplay,
+  SelectSearchInput,
+  formatItemLabel,
+  isResourceActive,
+  normalizeSearchValue,
+} from "./form-utils"
 
 interface Props {
   onSubmit: (dto: ComponentDto) => Promise<unknown>
@@ -76,18 +82,118 @@ export function SaidaForm({
 
   const [submitting, setSubmitting] = React.useState(false)
   const [errors, setErrors] = React.useState<{
-    group?: string
     item?: string
     collaborator?: string
     machine?: string
     unitPrice?: string
     quantity?: string
   }>({})
+  const [groupSearch, setGroupSearch] = React.useState("")
+  const [itemSearch, setItemSearch] = React.useState("")
+  const [collaboratorSearch, setCollaboratorSearch] = React.useState("")
+  const [machineSearch, setMachineSearch] = React.useState("")
+  const [pcpSearch, setPcpSearch] = React.useState("")
 
   const selectedItem = React.useMemo(
     () => (item ? items.find((i) => i.getApiId()?.toString() === item) : undefined),
     [items, item]
   )
+  const activeItemGroups = React.useMemo(
+    () => itemGroups.filter(isResourceActive),
+    [itemGroups]
+  )
+  const activeItems = React.useMemo(
+    () => items.filter(isResourceActive),
+    [items]
+  )
+  const selectableItems = React.useMemo(() => {
+    if (!group) return activeItems
+    return activeItems.filter((i) => {
+      const g = i.getRelation("itemGroup") as ItemGroupResource | undefined
+      return g?.getApiId()?.toString() === group
+    })
+  }, [activeItems, group])
+  const activeCollaborators = React.useMemo(
+    () => collaborators.filter(isResourceActive),
+    [collaborators]
+  )
+  const activeMachines = React.useMemo(
+    () => machines.filter(isResourceActive),
+    [machines]
+  )
+  const selectedGroupResource = React.useMemo(
+    () => (group ? itemGroups.find((g) => g.getApiId()?.toString() === group) : undefined),
+    [itemGroups, group]
+  )
+  const selectedCollaboratorResource = React.useMemo(
+    () =>
+      (collaborator
+        ? collaborators.find((c) => c.getApiId()?.toString() === collaborator)
+        : undefined),
+    [collaborators, collaborator]
+  )
+  const selectedMachineResource = React.useMemo(
+    () => (machine ? machines.find((m) => m.getApiId()?.toString() === machine) : undefined),
+    [machines, machine]
+  )
+  const selectedPcpResource = React.useMemo(
+    () => (pcp ? pcps.find((p) => p.getApiId()?.toString() === pcp) : undefined),
+    [pcps, pcp]
+  )
+  const normalizedGroupSearch = React.useMemo(
+    () => normalizeSearchValue(groupSearch),
+    [groupSearch]
+  )
+  const normalizedItemSearch = React.useMemo(
+    () => normalizeSearchValue(itemSearch),
+    [itemSearch]
+  )
+  const normalizedCollaboratorSearch = React.useMemo(
+    () => normalizeSearchValue(collaboratorSearch),
+    [collaboratorSearch]
+  )
+  const normalizedMachineSearch = React.useMemo(
+    () => normalizeSearchValue(machineSearch),
+    [machineSearch]
+  )
+  const normalizedPcpSearch = React.useMemo(
+    () => normalizeSearchValue(pcpSearch),
+    [pcpSearch]
+  )
+  const groupOptions = React.useMemo(() => {
+    if (!normalizedGroupSearch) return activeItemGroups
+    return activeItemGroups.filter((g) => {
+      const description = g.getAttribute?.("description") ?? ""
+      return normalizeSearchValue(String(description)).includes(normalizedGroupSearch)
+    })
+  }, [activeItemGroups, normalizedGroupSearch])
+  const filteredSelectableItems = React.useMemo(() => {
+    if (!normalizedItemSearch) return selectableItems
+    return selectableItems.filter((i) =>
+      normalizeSearchValue(formatItemLabel(i) || "").includes(normalizedItemSearch)
+    )
+  }, [normalizedItemSearch, selectableItems])
+  const collaboratorOptions = React.useMemo(() => {
+    if (!normalizedCollaboratorSearch) return activeCollaborators
+    return activeCollaborators.filter((c) => {
+      const name = c.getAttribute?.("name") ?? ""
+      return normalizeSearchValue(String(name)).includes(normalizedCollaboratorSearch)
+    })
+  }, [activeCollaborators, normalizedCollaboratorSearch])
+  const machineOptions = React.useMemo(() => {
+    if (!normalizedMachineSearch) return activeMachines
+    return activeMachines.filter((m) => {
+      const description = m.getAttribute?.("description") ?? ""
+      return normalizeSearchValue(String(description)).includes(normalizedMachineSearch)
+    })
+  }, [activeMachines, normalizedMachineSearch])
+  const pcpOptions = React.useMemo(() => {
+    if (!normalizedPcpSearch) return pcps
+    return pcps.filter((p) => {
+      const description = p.getAttribute?.("description") ?? ""
+      return normalizeSearchValue(String(description)).includes(normalizedPcpSearch)
+    })
+  }, [normalizedPcpSearch, pcps])
 
   const availableQty = React.useMemo<number | null>(() => {
     if (!selectedItem) return null
@@ -100,25 +206,33 @@ export function SaidaForm({
   }, [selectedItem])
   
   const nf = React.useMemo(() => new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }), [])
- 
-  const filteredItems = React.useMemo(
-    () =>
-      items.filter((i) => {
-        const g = i.getRelation("itemGroup") as ItemGroupResource | undefined
-        return group && g?.getApiId()?.toString() === group
-      }),
-    [items, group]
-  )
+  const groupLabel =
+    selectedGroupResource?.getAttribute?.("description") ??
+    groupRelation?.getAttribute?.("description") ??
+    ""
+  const itemLabel = formatItemLabel(selectedItem ?? itemRelation)
+  const collaboratorLabel =
+    selectedCollaboratorResource?.getAttribute?.("name") ??
+    collaboratorRelation?.getAttribute?.("name") ??
+    ""
+  const machineLabel =
+    selectedMachineResource?.getAttribute?.("description") ??
+    machineRelation?.getAttribute?.("description") ??
+    ""
+  const pcpLabel =
+    selectedPcpResource?.getAttribute?.("description") ??
+    pcpRelation?.getAttribute?.("description") ??
+    ""
 
-    React.useEffect(() => {
-    if (!group) {
+  React.useEffect(() => {
+    if (!group) return
+    if (
+      item &&
+      !selectableItems.some((i) => i.getApiId()?.toString() === item)
+    ) {
       setItem("")
-      return
     }
-    if (item && !filteredItems.some(i => i.getApiId()?.toString() === item)) {
-      setItem("")
-    }
-  }, [group, filteredItems])
+  }, [group, item, selectableItems])
 
   React.useEffect(() => {
     setGroup(groupRelation?.getApiId()?.toString() ?? "")
@@ -135,14 +249,17 @@ export function SaidaForm({
     const formEl = e.currentTarget as HTMLFormElement
 
     const newErrors: typeof errors = {}
-    if (!group) newErrors.group = "Campo obrigatório"
-    if (!item) newErrors.item = "Campo obrigatório"
-    if (!collaborator) newErrors.collaborator = "Campo obrigatório"
-    if (!machine) newErrors.machine = "Campo obrigatório"
+    const itemResource = selectedItem
+    const collaboratorResource = selectedCollaboratorResource
+    const machineResource = selectedMachineResource
+    if (!itemResource) newErrors.item = "Campo obrigatório"
+    if (!collaborator || !collaboratorResource)
+      newErrors.collaborator = "Campo obrigatório"
+    if (!machine || !machineResource) newErrors.machine = "Campo obrigatório"
     if (quantityNumber <= 0) newErrors.quantity = "Informe um valor"
     if (
       !newErrors.quantity &&
-      selectedItem &&
+      itemResource &&
       typeof availableQty === "number" &&
       quantityNumber > availableQty
     ) {
@@ -159,17 +276,35 @@ export function SaidaForm({
     dto.createFromColoquentResource(resource ?? new ComponentResource())
     dto.type = ComponentTypeEnum.OUT
     dto.quantity = quantityNumber
-    dto.itemGroupResource = itemGroups.find(
-      (g) => g.getApiId()?.toString() === group
-    )!
-    dto.itemResource = items.find((i) => i.getApiId()?.toString() === item)!
-    dto.collaboratorResource = collaborators.find(
-      (c) => c.getApiId()?.toString() === collaborator
-    )!
-    dto.machineResource = machines.find(
-      (m) => m.getApiId()?.toString() === machine
-    )!
-
+    if (itemResource) {
+      dto.itemResource = itemResource
+      const manualGroupResource = group
+        ? itemGroups.find((g) => g.getApiId()?.toString() === group)
+        : undefined
+      const relatedGroup = itemResource.getRelation?.("itemGroup") as
+        | ItemGroupResource
+        | undefined
+      const attrGroupId = itemResource
+        .getAttribute?.("item_group_id")
+        ?.toString?.()
+      const fallbackGroup =
+        attrGroupId
+          ? itemGroups.find(
+              (g) => g.getApiId()?.toString() === attrGroupId
+            )
+          : undefined
+      const resolvedGroup =
+        manualGroupResource ?? relatedGroup ?? fallbackGroup
+      if (resolvedGroup) {
+        dto.itemGroupResource = resolvedGroup
+      }
+    }
+    if (collaboratorResource) {
+      dto.collaboratorResource = collaboratorResource
+    }
+    if (machineResource) {
+      dto.machineResource = machineResource
+    }
     try {
       setSubmitting(true)
       await onSubmit(dto)
@@ -206,26 +341,45 @@ export function SaidaForm({
         <form className="flex flex-col gap-4" onSubmit={handleSubmit} aria-busy={submitting}>
           {/* grupo */}
           <div className="flex flex-col gap-1">
-            <Label>Grupo</Label>
+            <Label>Grupo (opcional)</Label>
             <Select
               value={group}
               onValueChange={setGroup}
               disabled={disableEdition}
+              onOpenChange={(open) => {
+                if (!open) setGroupSearch("")
+              }}
             >
-              <SelectTrigger className={cn(errors.group && "border-destructive")}>
-                <SelectValue placeholder="Selecione um grupo" />
+              <SelectTrigger className="w-full">
+                <SelectDisplay
+                  label={groupLabel}
+                  placeholder="Selecione um grupo (opcional)"
+                />
               </SelectTrigger>
               <SelectContent>
-                {itemGroups.map((g) => (
-                  <SelectItem key={g.getApiId()} value={g.getApiId()!.toString()}>
-                    {g.getAttribute("description")}
+                <SelectSearchInput
+                  value={groupSearch}
+                  onChange={setGroupSearch}
+                  placeholder="Buscar grupo..."
+                />
+                {groupOptions.length === 0 ? (
+                  <SelectItem value="__no_group__" disabled>
+                    {activeItemGroups.length === 0
+                      ? "Nenhum grupo ativo disponivel"
+                      : "Nenhum grupo encontrado"}
                   </SelectItem>
-                ))}
+                ) : (
+                  groupOptions.map((g) => (
+                    <SelectItem
+                      key={g.getApiId()}
+                      value={g.getApiId()!.toString()}
+                    >
+                      {g.getAttribute("description")}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
-            {errors.group && (
-              <span className="text-destructive text-xs">{errors.group}</span>
-            )}
           </div>
 
           {/* item */}
@@ -235,76 +389,139 @@ export function SaidaForm({
               value={item}
               onValueChange={setItem}
               disabled={disableEdition}
+              onOpenChange={(open) => {
+                if (!open) setItemSearch("")
+              }}
             >
-              <SelectTrigger className={cn(errors.item && "border-destructive")}>
-                <SelectValue placeholder="Selecione uma ferramenta" />
+              <SelectTrigger
+                className={cn("w-full", errors.item && "border-destructive")}
+              >
+                <SelectDisplay
+                  label={itemLabel}
+                  placeholder="Selecione uma ferramenta"
+                />
               </SelectTrigger>
               <SelectContent>
-                {!group && (
-                  <SelectItem value="__no_group__" disabled>
-                    Selecione um grupo primeiro
-                  </SelectItem>
-                )}
-                {group && filteredItems.length === 0 && (
+                <SelectSearchInput
+                  value={itemSearch}
+                  onChange={setItemSearch}
+                  placeholder="Buscar ferramenta..."
+                />
+                {filteredSelectableItems.length === 0 ? (
                   <SelectItem value="__empty_items__" disabled>
-                    NÃO HÁ FERRAMENTAS CADASTRADAS
+                    {selectableItems.length === 0
+                      ? group
+                        ? "Nenhuma ferramenta ativa neste grupo"
+                        : "Nenhuma ferramenta ativa disponivel"
+                      : "Nenhuma ferramenta encontrada"}
                   </SelectItem>
+                ) : (
+                  filteredSelectableItems.map((i) => {
+                    const label =
+                      formatItemLabel(i) ||
+                      i.getAttribute("name") ||
+                      i.getAttribute("code") ||
+                      "Sem identificacao"
+                    return (
+                      <SelectItem
+                        key={i.getApiId()}
+                        value={i.getApiId()!.toString()}
+                      >
+                        {label}
+                      </SelectItem>
+                    )
+                  })
                 )}
-                {group && filteredItems.length > 0 &&
-                  filteredItems.map((i) => (
-                    <SelectItem
-                      key={i.getApiId()}
-                      value={i.getApiId()!.toString()}
-                    >
-                      {i.getAttribute("name")}
-                    </SelectItem>
-                  ))
-                }
               </SelectContent>
             </Select>
             {errors.item && (
               <span className="text-destructive text-xs">{errors.item}</span>
             )}
           </div>
-
           <div className="flex flex-col gap-1">
             <Label>Máquina</Label>
-            <Select value={machine} onValueChange={setMachine}>
+            <Select
+              value={machine}
+              onValueChange={setMachine}
+              onOpenChange={(open) => {
+                if (!open) setMachineSearch("")
+              }}
+            >
               <SelectTrigger
-                className={cn(errors.machine && "border-destructive")}
+                className={cn("w-full", errors.machine && "border-destructive")}
               >
-                <SelectValue placeholder="Selecione uma máquina" />
+                <SelectDisplay
+                  label={machineLabel}
+                  placeholder="Selecione uma máquina"
+                />
               </SelectTrigger>
               <SelectContent>
-                {machines.map((m) => (
-                  <SelectItem key={m.getApiId()} value={m.getApiId()!.toString()}>
-                    {m.getAttribute("description")}
+                <SelectSearchInput
+                  value={machineSearch}
+                  onChange={setMachineSearch}
+                  placeholder="Buscar máquina..."
+                />
+                {machineOptions.length === 0 ? (
+                  <SelectItem value="__no_machine__" disabled>
+                    {activeMachines.length === 0
+                      ? "Nenhuma máquina ativa disponivel"
+                      : "Nenhuma máquina encontrada"}
                   </SelectItem>
-                ))}
+                ) : (
+                  machineOptions.map((m) => (
+                    <SelectItem
+                      key={m.getApiId()}
+                      value={m.getApiId()!.toString()}
+                    >
+                      {m.getAttribute("description")}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
             {errors.machine && (
               <span className="text-destructive text-xs">{errors.machine}</span>
             )}
           </div>
-
           <div className="flex flex-col gap-1">
             <Label>Colaborador</Label>
-            <Select value={collaborator} onValueChange={setCollaborator}>
+            <Select
+              value={collaborator}
+              onValueChange={setCollaborator}
+              onOpenChange={(open) => {
+                if (!open) setCollaboratorSearch("")
+              }}
+            >
               <SelectTrigger
-                className={cn(errors.collaborator && "border-destructive")}
+                className={cn("w-full", errors.collaborator && "border-destructive")}
               >
-                <SelectValue placeholder="Selecione um colaborador" />
+                <SelectDisplay
+                  label={collaboratorLabel}
+                  placeholder="Selecione um colaborador"
+                />
               </SelectTrigger>
               <SelectContent>
-                {collaborators.map((c) => (
-                  <SelectItem
-                    key={c.getApiId()}
-                    value={c.getApiId()!.toString()}
-                  >
-                    {c.getAttribute("name")}
+                <SelectSearchInput
+                  value={collaboratorSearch}
+                  onChange={setCollaboratorSearch}
+                  placeholder="Buscar colaborador..."
+                />
+                {collaboratorOptions.length === 0 ? (
+                  <SelectItem value="__no_collaborators__" disabled>
+                    {activeCollaborators.length === 0
+                      ? "Nenhum colaborador ativo disponivel"
+                      : "Nenhum colaborador encontrado"}
                   </SelectItem>
-                ))}
+                ) : (
+                  collaboratorOptions.map((c) => (
+                    <SelectItem
+                      key={c.getApiId()}
+                      value={c.getApiId()!.toString()}
+                    >
+                      {c.getAttribute("name")}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
             {errors.collaborator && (
@@ -313,7 +530,6 @@ export function SaidaForm({
               </span>
             )}
           </div>
-
           <div className="grid grid-cols-1 gap-4">
             <div className="flex flex-col gap-1">
               <Label>Quantidade</Label>
@@ -359,17 +575,39 @@ export function SaidaForm({
           </div>
 
           <div className="flex flex-col gap-3">
-            <Label>Ordem de serviço (opcional)</Label>
-            <Select value={pcp} onValueChange={setPcp}>
+            <Label>Ordem de serviço</Label>
+            <Select
+              value={pcp}
+              onValueChange={setPcp}
+              onOpenChange={(open) => {
+                if (!open) setPcpSearch("")
+              }}
+            >
               <SelectTrigger id="ordemServico" className="w-full">
-                <SelectValue placeholder="Selecione uma ordem" />
+                <SelectDisplay
+                  label={pcpLabel}
+                  placeholder="Selecione uma ordem"
+                />
               </SelectTrigger>
               <SelectContent>
-                {pcps.map((p) => (
-                  <SelectItem key={p.getApiId()} value={p.getApiId()!.toString()}>
-                    {p.getAttribute("description")}
+                <SelectSearchInput
+                  value={pcpSearch}
+                  onChange={setPcpSearch}
+                  placeholder="Buscar ordem..."
+                />
+                {pcpOptions.length === 0 ? (
+                  <SelectItem value="__no_pcp__" disabled>
+                    {pcps.length === 0
+                      ? "Nenhuma ordem cadastrada"
+                      : "Nenhuma ordem encontrada"}
                   </SelectItem>
-                ))}
+                ) : (
+                  pcpOptions.map((p) => (
+                    <SelectItem key={p.getApiId()} value={p.getApiId()!.toString()}>
+                      {p.getAttribute("description")}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>

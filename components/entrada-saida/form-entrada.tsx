@@ -15,7 +15,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { ComponentResource } from "@/resources/Component/component.resource"
@@ -25,6 +24,13 @@ import { ItemResource } from "@/resources/Item/item.resource"
 import { ItemGroupResource } from "@/resources/ItemGroup/item-group.resource"
 import { CollaboratorResource } from "@/resources/Collaborator/collaborator.resource"
 import { cn } from "@/lib/utils"
+import {
+  SelectDisplay,
+  SelectSearchInput,
+  formatItemLabel,
+  isResourceActive,
+  normalizeSearchValue,
+} from "./form-utils"
 
 interface Props {
   onSubmit: (dto: ComponentDto) => Promise<unknown>
@@ -81,34 +87,107 @@ export function EntradaForm({
 
   const [submitting, setSubmitting] = React.useState(false)
   const [errors, setErrors] = React.useState<{
-      group?: string
       item?: string
       collaborator?: string
       unitPrice?: string
       quantity?: string
     }>({})
+  const [groupSearch, setGroupSearch] = React.useState("")
+  const [itemSearch, setItemSearch] = React.useState("")
+  const [collaboratorSearch, setCollaboratorSearch] = React.useState("")
 
 
-  const filteredItems = React.useMemo(() => {
-    return items.filter((i) => {
+  const activeItemGroups = React.useMemo(
+    () => itemGroups.filter(isResourceActive),
+    [itemGroups]
+  )
+  const activeItems = React.useMemo(
+    () => items.filter(isResourceActive),
+    [items]
+  )
+  const selectableItems = React.useMemo(() => {
+    if (!group) return activeItems
+    return activeItems.filter((i) => {
       const g = i.getRelation("itemGroup") as ItemGroupResource | undefined
-      return group && String(g?.getApiId()) === group
+      return g?.getApiId()?.toString() === group
     })
-  }, [items, group])
+  }, [activeItems, group])
+  const activeCollaborators = React.useMemo(
+    () => collaborators.filter(isResourceActive),
+    [collaborators]
+  )
+  const selectedItemResource = React.useMemo(
+    () => (item ? items.find((i) => i.getApiId()?.toString() === item) : undefined),
+    [items, item]
+  )
+  const selectedGroupResource = React.useMemo(
+    () => (group ? itemGroups.find((g) => g.getApiId()?.toString() === group) : undefined),
+    [itemGroups, group]
+  )
+  const selectedCollaboratorResource = React.useMemo(
+    () =>
+      (collaborator
+        ? collaborators.find((c) => c.getApiId()?.toString() === collaborator)
+        : undefined),
+    [collaborators, collaborator]
+  )
+  const normalizedGroupSearch = React.useMemo(
+    () => normalizeSearchValue(groupSearch),
+    [groupSearch]
+  )
+  const normalizedItemSearch = React.useMemo(
+    () => normalizeSearchValue(itemSearch),
+    [itemSearch]
+  )
+  const normalizedCollaboratorSearch = React.useMemo(
+    () => normalizeSearchValue(collaboratorSearch),
+    [collaboratorSearch]
+  )
+  const groupOptions = React.useMemo(() => {
+    if (!normalizedGroupSearch) return activeItemGroups
+    return activeItemGroups.filter((g) => {
+      const description = g.getAttribute?.("description") ?? ""
+      return normalizeSearchValue(String(description)).includes(normalizedGroupSearch)
+    })
+  }, [activeItemGroups, normalizedGroupSearch])
+  const filteredSelectableItems = React.useMemo(() => {
+    if (!normalizedItemSearch) return selectableItems
+    return selectableItems.filter((i) =>
+      normalizeSearchValue(formatItemLabel(i) || "").includes(normalizedItemSearch)
+    )
+  }, [normalizedItemSearch, selectableItems])
+  const collaboratorOptions = React.useMemo(() => {
+    if (!normalizedCollaboratorSearch) return activeCollaborators
+    return activeCollaborators.filter((c) => {
+      const name = c.getAttribute?.("name") ?? ""
+      return normalizeSearchValue(String(name)).includes(normalizedCollaboratorSearch)
+    })
+  }, [activeCollaborators, normalizedCollaboratorSearch])
 
   const unitPrice = React.useMemo(() => unitPriceCents / 100, [unitPriceCents])
   const total = unitPrice * quantityNumber
   const noop = React.useCallback(() => {}, [])
+  const groupLabel =
+    selectedGroupResource?.getAttribute?.("description") ??
+    groupRelation?.getAttribute?.("description") ??
+    ""
+  const itemLabel = formatItemLabel(selectedItemResource ?? itemRelation)
+  const collaboratorLabel =
+    selectedCollaboratorResource?.getAttribute?.("name") ??
+    collaboratorRelation?.getAttribute?.("name") ??
+    ""
 
   React.useEffect(() => {
-    if (!group) {
+    if (!group) return
+    if (
+      item &&
+      !selectableItems.some(
+        (i) => i.getApiId()?.toString() === item
+      )
+    ) {
       setItem("")
-      return
     }
-    if (item && !items.some(i => i.getApiId()?.toString() === item && (i.getRelation("itemGroup") as ItemGroupResource | undefined)?.getApiId()?.toString() === group)) {
-      setItem("")
-    }
-  }, [group, items]) 
+  }, [group, item, selectableItems])
 
   function placeCaretEnd(el: HTMLInputElement | null) {
     if (!el) return
@@ -167,9 +246,11 @@ export function EntradaForm({
     const formEl = e.currentTarget as HTMLFormElement
 
     const newErrors: typeof errors = {}
-    if (!group) newErrors.group = "Campo obrigatório"
-    if (!item) newErrors.item = "Campo obrigatório"
-    if (!collaborator) newErrors.collaborator = "Campo obrigatório"
+    const itemResource = selectedItemResource
+    const collaboratorResource = selectedCollaboratorResource
+    if (!itemResource) newErrors.item = "Campo obrigatório"
+    if (!collaborator || !collaboratorResource)
+      newErrors.collaborator = "Campo obrigatório"
     if (unitPrice <= 0) newErrors.unitPrice = "Informe um valor"
 
     if (Object.keys(newErrors).length) {
@@ -184,14 +265,32 @@ export function EntradaForm({
     dto.unitPrice = unitPrice
     dto.quantity = quantityNumber
     dto.totalPrice = total
-    dto.itemGroupResource = itemGroups.find(
-      (g) => g.getApiId()?.toString() === group
-    )!
-    dto.itemResource = items.find((i) => i.getApiId()?.toString() === item)!
-    dto.collaboratorResource = collaborators.find(
-      (c) => c.getApiId()?.toString() === collaborator
-    )!
-
+    if (itemResource) {
+      dto.itemResource = itemResource
+      const manualGroupResource = group
+        ? itemGroups.find((g) => g.getApiId()?.toString() === group)
+        : undefined
+      const relatedGroup = itemResource.getRelation?.("itemGroup") as
+        | ItemGroupResource
+        | undefined
+      const attrGroupId = itemResource
+        .getAttribute?.("item_group_id")
+        ?.toString?.()
+      const fallbackGroup =
+        attrGroupId
+          ? itemGroups.find(
+              (g) => g.getApiId()?.toString() === attrGroupId
+            )
+          : undefined
+      const resolvedGroup =
+        manualGroupResource ?? relatedGroup ?? fallbackGroup
+      if (resolvedGroup) {
+        dto.itemGroupResource = resolvedGroup
+      }
+    }
+    if (collaboratorResource) {
+      dto.collaboratorResource = collaboratorResource
+    }
     try {
       setSubmitting(true)
       await onSubmit(dto)
@@ -231,21 +330,37 @@ export function EntradaForm({
               value={group}
               onValueChange={setGroup}
               disabled={disableEdition}
+              onOpenChange={(open) => {
+                if (!open) setGroupSearch("")
+              }}
             >
-              <SelectTrigger className={cn(errors.group && "border-destructive")}>
-                <SelectValue placeholder="Selecione um grupo" />
+              <SelectTrigger className="w-full">
+                <SelectDisplay
+                  label={groupLabel}
+                  placeholder="Selecione um grupo"
+                />
               </SelectTrigger>
               <SelectContent>
-                {itemGroups.map((g) => (
-                  <SelectItem key={g.getApiId()} value={g.getApiId()!.toString()}>
-                    {g.getAttribute("description")}
+                <SelectSearchInput
+                  value={groupSearch}
+                  onChange={setGroupSearch}
+                  placeholder="Buscar grupo..."
+                />
+                {groupOptions.length === 0 ? (
+                  <SelectItem value="__no_group__" disabled>
+                    {activeItemGroups.length === 0
+                      ? "Nenhum grupo ativo disponivel"
+                      : "Nenhum grupo encontrado"}
                   </SelectItem>
-                ))}
+                ) : (
+                  groupOptions.map((g) => (
+                    <SelectItem key={g.getApiId()} value={g.getApiId()!.toString()}>
+                      {g.getAttribute("description")}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
-            {errors.group && (
-              <span className="text-destructive text-xs">{errors.group}</span>
-            )}
           </div>
 
           <div className="flex flex-col gap-1">
@@ -254,55 +369,94 @@ export function EntradaForm({
               value={item}
               onValueChange={setItem}
               disabled={disableEdition}
+              onOpenChange={(open) => {
+                if (!open) setItemSearch("")
+              }}
             >
-              <SelectTrigger className={cn(errors.item && "border-destructive")}>
-                <SelectValue placeholder="Selecione uma ferramenta" />
+              <SelectTrigger
+                className={cn("w-full", errors.item && "border-destructive")}
+              >
+                <SelectDisplay
+                  label={itemLabel}
+                  placeholder="Selecione uma ferramenta"
+                />
               </SelectTrigger>
               <SelectContent>
-                {!group && (
-                  <SelectItem value="__no_group__" disabled>
-                    Selecione um grupo primeiro
-                  </SelectItem>
-                )}
-                {group && filteredItems.length === 0 && (
+                <SelectSearchInput
+                  value={itemSearch}
+                  onChange={setItemSearch}
+                  placeholder="Buscar ferramenta..."
+                />
+                {filteredSelectableItems.length === 0 ? (
                   <SelectItem value="__empty_items__" disabled>
-                    NÃO HÁ FERRAMENTAS CADASTRADAS
+                    {selectableItems.length === 0
+                      ? group
+                        ? "Nenhuma ferramenta ativa neste grupo"
+                        : "Nenhuma ferramenta ativa disponivel"
+                      : "Nenhuma ferramenta encontrada"}
                   </SelectItem>
+                ) : (
+                  filteredSelectableItems.map((i) => {
+                    const label =
+                      formatItemLabel(i) ||
+                      i.getAttribute("name") ||
+                      i.getAttribute("code") ||
+                      "Sem identificacao"
+                    return (
+                      <SelectItem
+                        key={i.getApiId()}
+                        value={i.getApiId()!.toString()}
+                      >
+                        {label}
+                      </SelectItem>
+                    )
+                  })
                 )}
-                {group && filteredItems.length > 0 &&
-                  filteredItems.map((i) => (
-                    <SelectItem
-                      key={i.getApiId()}
-                      value={i.getApiId()!.toString()}
-                    >
-                      {i.getAttribute("name")}
-                    </SelectItem>
-                  ))
-                }
               </SelectContent>
             </Select>
             {errors.item && (
               <span className="text-destructive text-xs">{errors.item}</span>
             )}
           </div>
-
           <div className="flex flex-col gap-1">
             <Label>Colaborador</Label>
-            <Select value={collaborator} onValueChange={setCollaborator}>
+            <Select
+              value={collaborator}
+              onValueChange={setCollaborator}
+              onOpenChange={(open) => {
+                if (!open) setCollaboratorSearch("")
+              }}
+            >
               <SelectTrigger
-                className={cn(errors.collaborator && "border-destructive")}
+                className={cn("w-full", errors.collaborator && "border-destructive")}
               >
-                <SelectValue placeholder="Selecione um colaborador" />
+                <SelectDisplay
+                  label={collaboratorLabel}
+                  placeholder="Selecione um colaborador"
+                />
               </SelectTrigger>
               <SelectContent>
-                {collaborators.map((c) => (
-                  <SelectItem
-                    key={c.getApiId()}
-                    value={c.getApiId()!.toString()}
-                  >
-                    {c.getAttribute("name")}
+                <SelectSearchInput
+                  value={collaboratorSearch}
+                  onChange={setCollaboratorSearch}
+                  placeholder="Buscar colaborador..."
+                />
+                {collaboratorOptions.length === 0 ? (
+                  <SelectItem value="__no_collaborators__" disabled>
+                    {activeCollaborators.length === 0
+                      ? "Nenhum colaborador ativo disponivel"
+                      : "Nenhum colaborador encontrado"}
                   </SelectItem>
-                ))}
+                ) : (
+                  collaboratorOptions.map((c) => (
+                    <SelectItem
+                      key={c.getApiId()}
+                      value={c.getApiId()!.toString()}
+                    >
+                      {c.getAttribute("name")}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
             {errors.collaborator && (
@@ -311,7 +465,6 @@ export function EntradaForm({
               </span>
             )}
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1">
               <Label>Preço unitário</Label>
