@@ -114,8 +114,40 @@ export function SectionCards() {
     return "Baixa eficiência, compras excessivas em relação ao consumo"
   }
 
-  const comprasTotal = data?.cards.compras.total ?? 0
-  const consumosTotal = data?.cards.consumos.total ?? 0
+  const { comprasTotal, consumosTotal } = React.useMemo(() => {
+    const fallback = {
+      comprasTotal: data?.cards.compras.total ?? 0,
+      consumosTotal: data?.cards.consumos.total ?? 0,
+    }
+
+    const series = Array.isArray(data?.series?.consumo_x_compras)
+      ? data?.series?.consumo_x_compras
+      : []
+    if (!series.length) return fallback
+
+    const monthsFromPeriod = (data?.period?.months ?? [])
+      .map((m) => m?.slice(0, 7))
+      .filter(Boolean) as string[]
+    const monthSet = new Set(monthsFromPeriod)
+
+    let comprasSum = 0
+    let consumosSum = 0
+    let hasPoint = false
+
+    for (const point of series) {
+      const monthKey = (point?.period ?? "").slice(0, 7)
+      if (!monthKey) continue
+      if (monthSet.size && !monthSet.has(monthKey)) continue
+      const compraVal = Number(point?.compra ?? 0)
+      const consumoVal = Number(point?.consumo ?? 0)
+      if (Number.isFinite(compraVal)) comprasSum += compraVal
+      if (Number.isFinite(consumoVal)) consumosSum += consumoVal
+      hasPoint = true
+    }
+
+    if (!hasPoint) return fallback
+    return { comprasTotal: comprasSum, consumosTotal: consumosSum }
+  }, [data?.cards.compras.total, data?.cards.consumos.total, data?.period?.months, data?.series?.consumo_x_compras])
   const saldoEstoque = data?.cards.estoque_sem_movimentacao.total ?? 0
 
   const alertas = (data?.cards.alertas_preview ?? []).map((a) => ({
