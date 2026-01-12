@@ -18,28 +18,24 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { DashboardPanoramaResource } from "@/resources/Dashboard/dashboard.resource"
+import { useDashboardPanorama } from "@/components/dashboard-panorama-provider"
+import { Skeleton } from "@/components/ui/skeleton"
 
 type Row = { id: string; nome: string; total: number }
-type Props = { tenantId: number }
 
-export function TopColaboradoresCard({ tenantId }: Props) {
-  const [rows, setRows] = React.useState<Row[]>([])
-  React.useEffect(() => {
-    let mounted = true
-    ;(async () => {
-      const res = await DashboardPanoramaResource.panorama()
-      if (!mounted) return
-      const map = res.tops_mes_atual.collaborators_top3 ?? []
-      setRows(map.map(r => ({ id: r.key, nome: r.name ?? r.key, total: r.valor })))
-    })()
-    return () => { mounted = false }
-  }, [tenantId])
+export function TopColaboradoresCard() {
+  const { data, loading } = useDashboardPanorama()
+
+  const rows = React.useMemo<Row[]>(() => {
+    const map = data?.tops_mes_atual.collaborators_top3 ?? []
+    return map.map((r) => ({ id: r.key, nome: r.name ?? r.key, total: r.valor }))
+  }, [data])
+
   return (
     <Card className="@container/card">
       <CardHeader>
         <CardTitle className="text-lg">Top 3 colaboradores</CardTitle>
-        <CardDescription>Consumo no último mês</CardDescription>
+        <CardDescription>Top do período</CardDescription>
       </CardHeader>
 
       <CardContent className="pb-4">
@@ -57,7 +53,6 @@ export function TopColaboradoresCard({ tenantId }: Props) {
               <TableRow key={c.id}>
                 <TableCell>
                   <Avatar className="size-8">
-                    {/* Sem AvatarImage → usa apenas o fallback padrão */}
                     <AvatarFallback>
                       {c.nome
                         .split(" ")
@@ -80,6 +75,28 @@ export function TopColaboradoresCard({ tenantId }: Props) {
                 </TableCell>
               </TableRow>
             ))}
+            {loading && rows.length === 0 && (
+              Array.from({ length: 3 }).map((_, idx) => (
+                <TableRow key={`skeleton-${idx}`}>
+                  <TableCell>
+                    <Skeleton className="h-8 w-8 rounded-full" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Skeleton className="h-4 w-16 ml-auto" />
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+            {!loading && rows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={3} className="text-sm text-muted-foreground">
+                  Sem dados para o período selecionado.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </CardContent>

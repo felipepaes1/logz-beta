@@ -3,6 +3,7 @@
 import React from "react"
 
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, Tooltip } from "recharts"
+import type { TooltipProps } from "recharts"
 
 import {
   Card,
@@ -11,14 +12,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart"
-import { DashboardPanoramaResource } from "@/resources/Dashboard/dashboard.resource"
-import { toast } from "sonner"
+import { ChartConfig, ChartContainer } from "@/components/ui/chart"
+import { useDashboardPanorama } from "@/components/dashboard-panorama-provider"
 
 export const description = "A multiple line chart"
 
@@ -28,16 +23,16 @@ function toMonthLabel(ym: string) {
   return new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(d)
 }
 
-function periodToMonthDate(value?: string | null) {
-  if (!value) return null
-  const sanitized = value.slice(0, 7)
-  const [yearStr, monthStr] = sanitized.split("-")
-  if (!yearStr || !monthStr) return null
-  const year = Number(yearStr)
-  const month = Number(monthStr)
-  if (!Number.isFinite(year) || !Number.isFinite(month)) return null
-  if (month < 1 || month > 12) return null
-  return new Date(year, month - 1, 1)
+function formatDateLabel(date?: string | null) {
+  if (!date) return null
+  const normalized = date.length === 7 ? `${date}-01` : date
+  const parsed = new Date(normalized)
+  if (Number.isNaN(parsed.getTime())) return null
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(parsed)
 }
 
 const chartConfig = {
@@ -73,112 +68,78 @@ type PanoramaLite = {
 
 
 export function ChartLineMultiple() {
-  const [rows, setRows] = React.useState<{ month: string; Consumido: number; Comprado: number }[]>([])
-  const [range, setRange] = React.useState<string>("")
-  const [loading, setLoading] = React.useState<boolean>(false)
-  const requestIdRef = React.useRef(0)
+  const { data, loading } = useDashboardPanorama()
 
-   const yearParams = React.useMemo(() => {
-    const now = new Date()
-    const y = now.getFullYear()
-    const from = `${y}-01-01`
-    const to = `${y}-12-31`
-    return { date_from: from, date_to: to }
-  }, [])
+  const rows = React.useMemo(() => {
+    const parsed = data as unknown as PanoramaLite | null
+    if (!parsed) return []
+    const monthsFromPeriod = (parsed.period?.months ?? [])
+      .map((m) => m?.slice(0, 7))
+      .filter(Boolean) as string[]
+    const monthSet = new Set(monthsFromPeriod)
 
-  const fetchData = React.useCallback(async (params: { date_from?: string | null; date_to?: string | null }) => {
-    const myId = ++requestIdRef.current
-    setLoading(true)
-    try {
-      const res = await DashboardPanoramaResource.panorama(params)
-      const parsed = res as unknown as PanoramaLite
-      const now = new Date()
-      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-      const startOfYear = new Date(now.getFullYear(), 0, 1)
-
-      const filteredSeries = (parsed.series.consumo_x_compras ?? [])
-        .map((point) => ({
-          ...point,
-          periodDate: periodToMonthDate(point.period),
-        }))
-        .filter((point) => {
-          if (!point.periodDate) return false
-          return (
-            point.periodDate >= startOfYear &&
-            point.periodDate <= currentMonthStart
-          )
-        })
-        .sort((a, b) => (a.periodDate!.getTime() - b.periodDate!.getTime()))
-
-      const data = filteredSeries.map((p) => ({
-          month: toMonthLabel(p.period),
-          Consumido: p.consumo,
-          Comprado: p.compra,
-        }))
-
-      if (myId !== requestIdRef.current) return
-      setRows(data)
-
-      const months = (parsed.period.months ?? []).filter((month) => {
-        const periodDate = periodToMonthDate(month)
-        if (!periodDate) return false
-        return (
-          periodDate >= startOfYear &&
-          periodDate <= currentMonthStart
-        )
+    return (parsed.series?.consumo_x_compras ?? [])
+      .map((point) => ({
+        ...point,
+        monthKey: (point.period ?? "").slice(0, 7),
+      }))
+      .filter((point) => {
+        if (!point.monthKey) return false
+        if (!monthSet.size) return true
+        return monthSet.has(point.monthKey)
       })
-      if (months.length) {
-        setRange(`${months[0]} - ${months[months.length - 1]}`)
-      } else if (filteredSeries.length) {
-        const firstPeriod = filteredSeries[0]?.period
-        const lastPeriod = filteredSeries[filteredSeries.length - 1]?.period
-        setRange(firstPeriod && lastPeriod ? `${firstPeriod} - ${lastPeriod}` : firstPeriod ?? "")
-      } else {
-        setRange("")
-      }
-    } catch (e: any) {
-      console.error(e)
-      if (myId === requestIdRef.current) toast.error("Falha ao carregar panorama")
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+      .sort(
+        (a, b) =>
+          new Date(`${a.monthKey}-01`).getTime() -
+          new Date(`${b.monthKey}-01`).getTime()
+      )
+      .map((p) => ({
+        month: toMonthLabel(p.monthKey),
+        Consumido: p.consumo,
+        Comprado: p.compra,
+      }))
+  }, [data])
 
-  React.useEffect(() => {
-    fetchData(yearParams)
-  }, [fetchData, yearParams])
+  const range = React.useMemo(() => {
+    const from = formatDateLabel(data?.period?.from ?? null)
+    const to = formatDateLabel(data?.period?.to ?? null)
+    if (from && to) return `${from} até ${to}`
+    if (from) return `Desde ${from}`
+    if (to) return `Até ${to}`
+    return "Ano atual"
+  }, [data?.period?.from, data?.period?.to])
 
   const CustomTooltip = React.useCallback(
-  ({ active, payload, label }: any) => {
-    if (!active || !payload?.length) return null
-    return (
-      <div className="rounded-md border bg-popover/95 p-3 text-xs shadow-md backdrop-blur-sm dark:bg-popover/80">
-        <div className="mb-2 font-medium">{label}</div>
-        <div className="space-y-3">
-          {payload.map((item: any) => (
-            <div
-              key={item.dataKey}
-              className="flex items-center gap-x-4"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  aria-hidden
-                  className="inline-block size-2 rounded-full"
-                  style={{ background: item.color }}
-                />
-                <span>{item.name ?? item.dataKey}</span>
+    ({ active, payload, label }: TooltipProps<number, string>) => {
+      if (!active || !payload?.length) return null
+      return (
+        <div className="rounded-md border bg-popover/95 p-3 text-xs shadow-md backdrop-blur-sm dark:bg-popover/80">
+          <div className="mb-2 font-medium">{label}</div>
+          <div className="space-y-3">
+            {payload.map((item) => (
+              <div
+                key={item.dataKey}
+                className="flex items-center gap-x-4"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    aria-hidden
+                    className="inline-block size-2 rounded-full"
+                    style={{ background: item.color }}
+                  />
+                  <span>{item.name ?? item.dataKey}</span>
+                </div>
+                <span className="tabular-nums font-semibold ml-auto">
+                  {formatBRL(Number(item.value))}
+                </span>
               </div>
-              <span className="tabular-nums font-semibold ml-auto">
-                {formatBRL(Number(item.value))}
-              </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
-    )
-  },
-  []
-)
+      )
+    },
+    []
+  )
 
   return (
     <Card>

@@ -6,7 +6,7 @@ export class DashboardPanoramaResource extends BaseResource {
 
   private static _inflight = new Map<string, Promise<DashboardPanoramaAttributes>>();
   private static _cache = new Map<string, { exp: number; data: DashboardPanoramaAttributes }>();
-  private static _defaultTtlMs = 2_000;
+  private static _defaultTtlMs = 3_600_000; 
 
   private static _key(params?: { date_from?: string | null; date_to?: string | null }) {
     return JSON.stringify(params ?? {});
@@ -84,6 +84,9 @@ export interface DashboardPanoramaAttributes {
     from?: string | null;
     to?: string | null;
     months: string[];
+  };
+  filters?: {
+    available_months?: string[];
   };
   cards: {
     compras: { total: number; media_mensal: number };
