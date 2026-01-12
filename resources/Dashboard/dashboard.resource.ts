@@ -39,8 +39,8 @@ export class DashboardPanoramaResource extends BaseResource {
 
     const p = (async () => {
       const response = await this.getHttpClient().get(uri, params);
-      const data = (response as any)?.axiosResponse?.data;
-      const attributes = (data?.data?.attributes ?? data?.attributes ?? data) as DashboardPanoramaAttributes;
+      const payload = (response as any)?.axiosResponse?.data ?? (response as any)?.data ?? response;
+      const attributes = (payload?.data?.attributes ?? payload?.attributes ?? payload) as DashboardPanoramaAttributes;
       if (ttlMs > 0) {
         this._cache.set(key, { exp: Date.now() + ttlMs, data: attributes });
       } else {
