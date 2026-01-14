@@ -21,37 +21,6 @@ import { ChartBarMonthlyBalance } from "@/components/graficos/chart-bar-monthly-
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip"
 import { useDashboardPanorama } from "@/components/dashboard-panorama-provider"
 
-type ConsumoCompraPoint = { period?: string | null; consumo?: number; compra?: number }
-
-function periodToMonthDate(value?: string | null) {
-  if (!value) return null
-  const sanitized = value.slice(0, 7)
-  const [yearStr, monthStr] = sanitized.split("-")
-  if (!yearStr || !monthStr) return null
-  const year = Number(yearStr)
-  const month = Number(monthStr)
-  if (!Number.isFinite(year) || !Number.isFinite(month)) return null
-  if (month < 1 || month > 12) return null
-  return new Date(year, month - 1, 1)
-}
-
-function getClosedMonthsPoints(series: ConsumoCompraPoint[] | undefined, currentMonthStart: Date) {
-  return (Array.isArray(series) ? series : [])
-    .map((point) => ({
-      consumo: Number(point?.consumo ?? 0),
-      compra: Number(point?.compra ?? 0),
-      periodDate: periodToMonthDate(point?.period ?? null),
-    }))
-    .filter(
-      (point) =>
-        point.periodDate &&
-        point.periodDate < currentMonthStart &&
-        Number.isFinite(point.consumo) &&
-        Number.isFinite(point.compra)
-    )
-    .sort((a, b) => a.periodDate!.getTime() - b.periodDate!.getTime())
-}
-
 function parseReferenceDate(value?: string | null) {
   if (!value) return new Date()
   const parsed = new Date(value)
@@ -66,32 +35,17 @@ export function SectionCards() {
     [data?.period?.to]
   )
 
-  const currentMonthStart = React.useMemo(
-    () => new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1),
-    [referenceDate]
-  )
-
   const { displayValue, hasSufficientData } = React.useMemo(() => {
-    const closedPoints = getClosedMonthsPoints(
-      data?.series?.consumo_x_compras,
-      currentMonthStart
-    )
-    if (closedPoints.length >= 3) {
-      const lastThree = closedPoints.slice(-3)
-      const totalConsumo = lastThree.reduce(
-        (acc, point) => acc + point.consumo,
-        0
-      )
-      const totalCompra = lastThree.reduce(
-        (acc, point) => acc + point.compra,
-        0
-      )
-      const pct = totalCompra > 0 ? (totalConsumo / totalCompra) * 100 : 0
-      const rounded = Number.isFinite(pct) ? Math.round(pct * 10) / 10 : 0
-      return { displayValue: rounded, hasSufficientData: true }
+    const media = data?.cards?.eficiencia_compra?.media_3m_congelada
+    if (media === null || media === undefined) {
+      return { displayValue: 0, hasSufficientData: false }
     }
-    return { displayValue: 0, hasSufficientData: false }
-  }, [currentMonthStart, data?.series?.consumo_x_compras])
+    const value = Number(media)
+    if (!Number.isFinite(value)) {
+      return { displayValue: 0, hasSufficientData: false }
+    }
+    return { displayValue: value, hasSufficientData: true }
+  }, [data?.cards?.eficiencia_compra?.media_3m_congelada])
 
   const getColor = (value: number) => {
     if (value > 100) return "bg-red-600"
