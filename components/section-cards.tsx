@@ -35,17 +35,19 @@ export function SectionCards() {
     [data?.period?.to]
   )
 
-  const { displayValue, hasSufficientData } = React.useMemo(() => {
-    const media = data?.cards?.eficiencia_compra?.media_3m_congelada
-    if (media === null || media === undefined) {
-      return { displayValue: 0, hasSufficientData: false }
+  const { displayValue, displayValueLabel, hasSufficientData } = React.useMemo(() => {
+    const ratio = data?.cards?.eficiencia_compra?.valor
+    if (ratio === null || ratio === undefined) {
+      return { displayValue: 0, displayValueLabel: "0.00", hasSufficientData: false }
     }
-    const value = Number(media)
+    const value = Number(ratio)
     if (!Number.isFinite(value)) {
-      return { displayValue: 0, hasSufficientData: false }
+      return { displayValue: 0, displayValueLabel: "0.00", hasSufficientData: false }
     }
-    return { displayValue: value, hasSufficientData: true }
-  }, [data?.cards?.eficiencia_compra?.media_3m_congelada])
+    const pctValue = value * 100
+    const pctLabel = pctValue.toFixed(2)
+    return { displayValue: pctValue, displayValueLabel: pctLabel, hasSufficientData: true }
+  }, [data?.cards?.eficiencia_compra?.valor])
 
   const getColor = (value: number) => {
     if (value > 100) return "bg-red-600"
@@ -68,40 +70,8 @@ export function SectionCards() {
     return "Baixa eficiência, compras excessivas em relação ao consumo"
   }
 
-  const { comprasTotal, consumosTotal } = React.useMemo(() => {
-    const fallback = {
-      comprasTotal: data?.cards.compras.total ?? 0,
-      consumosTotal: data?.cards.consumos.total ?? 0,
-    }
-
-    const series = Array.isArray(data?.series?.consumo_x_compras)
-      ? data?.series?.consumo_x_compras
-      : []
-    if (!series.length) return fallback
-
-    const monthsFromPeriod = (data?.period?.months ?? [])
-      .map((m) => m?.slice(0, 7))
-      .filter(Boolean) as string[]
-    const monthSet = new Set(monthsFromPeriod)
-
-    let comprasSum = 0
-    let consumosSum = 0
-    let hasPoint = false
-
-    for (const point of series) {
-      const monthKey = (point?.period ?? "").slice(0, 7)
-      if (!monthKey) continue
-      if (monthSet.size && !monthSet.has(monthKey)) continue
-      const compraVal = Number(point?.compra ?? 0)
-      const consumoVal = Number(point?.consumo ?? 0)
-      if (Number.isFinite(compraVal)) comprasSum += compraVal
-      if (Number.isFinite(consumoVal)) consumosSum += consumoVal
-      hasPoint = true
-    }
-
-    if (!hasPoint) return fallback
-    return { comprasTotal: comprasSum, consumosTotal: consumosSum }
-  }, [data?.cards.compras.total, data?.cards.consumos.total, data?.period?.months, data?.series?.consumo_x_compras])
+  const comprasTotal = data?.cards.compras.total ?? 0
+  const consumosTotal = data?.cards.consumos.total ?? 0
   const saldoEstoque = data?.cards.estoque_sem_movimentacao.total ?? 0
 
   const alertas = (data?.cards.alertas_preview ?? []).map((a) => ({
@@ -249,7 +219,7 @@ export function SectionCards() {
 
             <div className="text-center mt-4">
               <span className="text-lg font-bold">{getLabel(displayValue)}</span>
-              <span className="block text-sm">{displayValue}%</span>
+              <span className="block text-sm">{displayValueLabel}%</span>
             </div>
           </div>
         </CardContent>
