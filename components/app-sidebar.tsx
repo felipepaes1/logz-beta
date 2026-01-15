@@ -8,6 +8,7 @@ import {
   IconTimeline,
   IconArrowsSort,
   IconBuildingFactory2,
+  IconListCheck,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -53,6 +54,11 @@ export const sidebarData = {
       title: "Centro de Custos",
       url: "/centro-de-custos",
       icon: IconBuildingFactory2,
+    },
+        {
+      title: "Ordens de Produção",
+      url: "/ordens-de-producao",
+      icon: IconListCheck,
     },
     {
       title: "Entrada/Saída",
