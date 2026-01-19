@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -155,6 +156,8 @@ export function FerramentaForm({
     )
     const itemGroupRsc = groups.find((g) => g.getApiId()?.toString() === itemGroupId)
     const providerRsc = providers.find((p) => p.getApiId()?.toString() === providerId)
+    const observationRaw = data.get("observation")?.toString() ?? ""
+    const observation = observationRaw.trim() || null
 
     const newErrors: typeof errors = {}
     if (!nome) newErrors.nome = "Campo obrigatório"
@@ -176,6 +179,7 @@ export function FerramentaForm({
     dto.description = nome
     const minQuantityValue = Number(data.get("estoqueMinimo") || 0)
     dto.min_quantity = minQuantityValue
+    dto.observation = observation
     // Preserve current estoque (quantity) when editing; only initialize on create
     dto.quantity = resource?.getAttribute?.("quantity") ?? 0
     dto.manufacturerResource = manufacturerRsc
@@ -201,6 +205,7 @@ export function FerramentaForm({
       updatedResource.setAttribute?.("active", active)
       updatedResource.setAttribute?.("description", nome)
       updatedResource.setAttribute?.("min_quantity", dto.min_quantity)
+      updatedResource.setAttribute?.("observation", dto.observation)
       updatedResource.setAttribute?.("quantity", dto.quantity)
       updatedResource.setRelation?.("manufacturer", manufacturerRsc ?? null)
       updatedResource.setRelation?.("itemGroup", itemGroupRsc ?? null)
@@ -380,6 +385,17 @@ export function FerramentaForm({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Observação */}
+          <div className="flex flex-col gap-3">
+            <Label htmlFor="observation">Observação</Label>
+            <Textarea
+              id="observation"
+              name="observation"
+              defaultValue={resource?.getAttribute("observation") ?? ""}
+              placeholder="Observação (opcional)"
+            />
           </div>
 
           {/* Status */}

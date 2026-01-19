@@ -12,6 +12,7 @@ export class ItemDto extends BaseDTO {
     public id?: string;
     public name: string;
     public description?: string;
+    public observation?: string | null;
     public code: string;
     public quantity: number;
     public min_quantity: number;
@@ -42,6 +43,7 @@ export class ItemDto extends BaseDTO {
         this.name = resource?.getAttribute('name');
         this.active = !!resource?.getAttribute('active');
         this.description = resource?.getAttribute('description');
+        this.observation = resource?.getAttribute('observation') ?? null;
         this.code = resource?.getAttribute('code');
         this.active = !!resource?.getAttribute('active');
         this.quantity = resource?.getAttribute('quantity');
