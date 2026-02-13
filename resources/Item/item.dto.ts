@@ -17,8 +17,8 @@ export class ItemDto extends BaseDTO {
     public quantity: number;
     public min_quantity: number;
 
-    public avatar_id: string;
-    public avatar: any;
+    public avatar_id?: number | string | null;
+    public avatar?: any;
 
     public manufacturerResource?: ManufacturerResource;
     public manufacturerDto: ManufacturerDto;
@@ -52,6 +52,11 @@ export class ItemDto extends BaseDTO {
         this.manufacturerResource = resource.getRelation('manufacturer');
         this.itemGroupResource = resource.getRelation('itemGroup');
         this.avatar = resource.getRelation('avatar');
+        this.avatar_id =
+          resource?.getAttribute?.('avatar_id') ??
+          this.avatar?.getApiId?.() ??
+          this.avatar?.getAttribute?.('id') ??
+          null;
         this.providerResource = resource.getRelation?.('provider');
         this.provider_id = Number(resource?.getAttribute?.('provider_id') ?? this.providerResource?.getApiId?.() ?? NaN) || undefined;
         this.supplier =

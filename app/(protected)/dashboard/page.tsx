@@ -2,9 +2,11 @@
 
 import * as React from "react"
 import dynamic from "next/dynamic"
+import { useRouter } from "next/navigation"
 import { PageSpinner } from "@/components/ui/page-spinner"
 import { DashboardPanoramaProvider } from "@/components/dashboard-panorama-provider"
 import { DashboardDateFilter } from "@/components/dashboard-date-filter"
+import { useAuthUser } from "@/hooks/use-auth-user"
 
 const SectionCards = dynamic(
   () => import("@/components/section-cards").then((m) => m.SectionCards),
@@ -26,6 +28,24 @@ const SectionGraphCards = dynamic(
 )
 
 export default function Page() {
+  const router = useRouter()
+  const { role_id } = useAuthUser({
+    name: "",
+    email: "",
+    avatar: "",
+    role_id: null,
+  })
+
+  React.useEffect(() => {
+    if (role_id === 5) {
+      router.replace("/entrada-saida")
+    }
+  }, [role_id, router])
+
+  if (role_id === 5) {
+    return <PageSpinner />
+  }
+
   return (
     <DashboardPanoramaProvider>
       <div className="flex flex-1 flex-col">

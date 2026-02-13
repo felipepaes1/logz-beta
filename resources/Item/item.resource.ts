@@ -27,12 +27,26 @@ export class ItemResource extends BaseResource {
         await this.getHttpClient().delete(uri);
     }
 
-    public static async dismarkAsPreOrdered(itemIds: Array<number | string>): Promise<any> {
-        return this.action('dismark-as-pre-ordered', { item_ids: itemIds });
+    public static async dismarkAsPreOrdered(
+        payload: Array<number | string> | { item_ids?: Array<number | string>; items?: Array<{ item_id: number | string }> }
+    ): Promise<any> {
+        const body = Array.isArray(payload) ? { item_ids: payload } : payload;
+        return this.action('dismark-as-pre-ordered', body);
     }
 
-    public static async markAsPreOrdered(itemIds: Array<number | string>): Promise<any> {
-        return this.action('mark-as-pre-ordered', { item_ids: itemIds });
+    public static async markAsPreOrdered(
+        payload:
+            | Array<number | string>
+            | {
+                  opened_by?: number | string;
+                  items?: Array<{ item_id: number | string; provider_id?: number | string; requested_qty?: number }>;
+                  item_ids?: Array<number | string>;
+                  provider_id?: number | string;
+                  requested_qty?: number;
+              }
+    ): Promise<any> {
+        const body = Array.isArray(payload) ? { item_ids: payload } : payload;
+        return this.action('mark-as-pre-ordered', body);
     }
 
     public static async saveAsNew(itemDto: ItemDto): Promise<any> {

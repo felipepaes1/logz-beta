@@ -2,22 +2,23 @@
 
 import * as React from "react"
 
-import Image from "next/image"
 import { IconAlertCircle } from "@tabler/icons-react"
-import WarningCircleUrl from "@/assets/icons-figma/WarningCircle.svg"
 import { DataTable } from "@/components/data-table"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { ItemResource } from "@/resources/Item/item.resource"
 import { ManufacturerResource } from "@/resources/Manufacturer/manufacturer.resource"
 import { ItemGroupResource } from "@/resources/ItemGroup/item-group.resource"
 import { ProviderResource } from "@/resources/Provider/provider.resource"
+import { PurchaseRequestResource } from "@/resources/PurchaseRequest/purchase-request.resource"
 import { PluralResponse } from "coloquent"
 import { FerramentaForm } from "@/components/ferramentas/form"
 import { RowActions } from "@/components/ferramentas/row-actions"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
-import type { Ferramenta } from "@/components/ferramentas/types"
+import type { Ferramenta, PurchaseRequestInfo } from "@/components/ferramentas/types"
 import { toast } from "sonner"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -30,6 +31,230 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+const readAttr = (obj: any, key: string) => {
+  if (!obj) return undefined
+  if (typeof obj.getAttribute === "function") return obj.getAttribute(key)
+  if (obj?.attributes && Object.prototype.hasOwnProperty.call(obj.attributes, key)) {
+    return obj.attributes[key]
+  }
+  return obj[key]
+}
+
+const readRel = (obj: any, key: string) => {
+  if (!obj) return undefined
+  if (typeof obj.getRelation === "function") return obj.getRelation(key)
+  return obj[key] ?? obj?.relationships?.[key]?.data
+}
+
+const buildIncludedMap = (included: any[]) => {
+  const map = new Map<string, any>()
+  if (!Array.isArray(included)) return map
+  included.forEach((entry) => {
+    if (entry?.type && entry?.id != null) {
+      map.set(`${entry.type}:${entry.id}`, entry)
+    }
+  })
+  return map
+}
+
+const resolveIncluded = (value: any, includedMap: Map<string, any>) => {
+  if (!value) return value
+  if (Array.isArray(value)) {
+    return value.map((entry) => resolveIncluded(entry, includedMap))
+  }
+  if (value?.type && value?.id != null) {
+    return includedMap.get(`${value.type}:${value.id}`) ?? value
+  }
+  return value
+}
+
+const resolveRelation = (obj: any, key: string, includedMap: Map<string, any>) => {
+  const rel = readRel(obj, key)
+  return resolveIncluded(rel, includedMap)
+}
+
+const pickPurchaseRequest = (raw: any) => {
+  if (!raw) return null
+  if (Array.isArray(raw)) {
+    const open = raw.find((entry) => {
+      const closedAt = readAttr(entry, "closed_at") ?? readAttr(entry, "closedAt")
+      return closedAt === null || closedAt === undefined || closedAt === ""
+    })
+    return open ?? raw[0] ?? null
+  }
+  return raw
+}
+
+const extractPurchaseRequestInfo = (resource: ItemResource): PurchaseRequestInfo | null => {
+  const relation =
+    resource.getRelation?.("purchase_request") ??
+    resource.getRelation?.("purchaseRequest") ??
+    resource.getRelation?.("purchase_requests") ??
+    resource.getRelation?.("purchaseRequests") ??
+    null
+
+  const raw =
+    relation ??
+    resource.getAttribute("purchase_request") ??
+    resource.getAttribute("purchaseRequest") ??
+    resource.getAttribute("purchase_requests") ??
+    resource.getAttribute("purchaseRequests") ??
+    null
+
+  const pr = pickPurchaseRequest(raw)
+  if (!pr) return null
+
+  const provider =
+    readRel(pr, "provider") ??
+    readAttr(pr, "provider") ??
+    readAttr(pr, "provider_resource") ??
+    null
+
+  const providerName =
+    provider?.getAttribute?.("company_name") ??
+    provider?.getAttribute?.("name") ??
+    provider?.company_name ??
+    provider?.name ??
+    readAttr(pr, "provider_name") ??
+    readAttr(pr, "providerName") ??
+    undefined
+
+  const providerIdRaw =
+    readAttr(pr, "provider_id") ??
+    readAttr(pr, "providerId") ??
+    provider?.getApiId?.() ??
+    provider?.id ??
+    undefined
+  const providerIdNum = Number(providerIdRaw)
+  const providerId = Number.isFinite(providerIdNum) ? providerIdNum : undefined
+
+  const requestedQtyRaw =
+    readAttr(pr, "requested_qty") ??
+    readAttr(pr, "requestedQty") ??
+    readAttr(pr, "requested_quantity") ??
+    readAttr(pr, "quantity") ??
+    undefined
+  const requestedQtyNum = Number(requestedQtyRaw)
+  const requestedQty = Number.isFinite(requestedQtyNum) ? requestedQtyNum : undefined
+
+  const openedAt =
+    readAttr(pr, "opened_at") ??
+    readAttr(pr, "openedAt") ??
+    readAttr(pr, "created_at") ??
+    readAttr(pr, "createdAt") ??
+    undefined
+
+  const closedAt = readAttr(pr, "closed_at") ?? readAttr(pr, "closedAt") ?? undefined
+  const openedBy =
+    readAttr(pr, "opened_by") ??
+    readAttr(pr, "openedBy") ??
+    readAttr(pr, "opened_by_name") ??
+    readAttr(pr, "openedByName") ??
+    undefined
+
+  const hasInfo = providerName || providerId || requestedQty || openedAt || closedAt || openedBy
+  if (!hasInfo) return null
+
+  return {
+    providerName,
+    providerId,
+    requestedQty,
+    openedAt: openedAt ? String(openedAt) : undefined,
+    closedAt: closedAt ? String(closedAt) : undefined,
+    openedBy,
+  }
+}
+
+const parsePurchaseRequestEntry = (entry: any, includedMap: Map<string, any>) => {
+  if (!entry) return null
+  const provider =
+    resolveRelation(entry, "provider", includedMap) ??
+    readAttr(entry, "provider") ??
+    null
+  const item =
+    resolveRelation(entry, "item", includedMap) ??
+    readAttr(entry, "item") ??
+    null
+  const openedByRel =
+    resolveRelation(entry, "openedBy", includedMap) ??
+    resolveRelation(entry, "opened_by", includedMap) ??
+    resolveRelation(entry, "opened_by_user", includedMap) ??
+    readAttr(entry, "openedBy") ??
+    readAttr(entry, "opened_by") ??
+    null
+
+  const itemIdRaw =
+    readAttr(entry, "item_id") ??
+    readAttr(item, "id") ??
+    item?.id ??
+    item?.getApiId?.()
+  const itemId = Number(itemIdRaw)
+  if (!Number.isFinite(itemId)) return null
+
+  const providerName =
+    provider?.getAttribute?.("company_name") ??
+    provider?.getAttribute?.("name") ??
+    provider?.company_name ??
+    provider?.name ??
+    readAttr(entry, "provider_name") ??
+    readAttr(entry, "providerName") ??
+    undefined
+
+  const providerIdRaw =
+    readAttr(entry, "provider_id") ??
+    readAttr(provider, "id") ??
+    provider?.id ??
+    provider?.getApiId?.() ??
+    undefined
+  const providerIdNum = Number(providerIdRaw)
+  const providerId = Number.isFinite(providerIdNum) ? providerIdNum : undefined
+
+  const requestedQtyRaw =
+    readAttr(entry, "requested_qty") ??
+    readAttr(entry, "requestedQty") ??
+    readAttr(entry, "requested_quantity") ??
+    readAttr(entry, "quantity") ??
+    undefined
+  const requestedQtyNum = Number(requestedQtyRaw)
+  const requestedQty = Number.isFinite(requestedQtyNum) ? requestedQtyNum : undefined
+
+  const openedAt =
+    readAttr(entry, "opened_at") ??
+    readAttr(entry, "openedAt") ??
+    readAttr(entry, "created_at") ??
+    readAttr(entry, "createdAt") ??
+    undefined
+  const closedAt = readAttr(entry, "closed_at") ?? readAttr(entry, "closedAt") ?? undefined
+  const openedByName =
+    readAttr(openedByRel, "name") ??
+    readAttr(openedByRel, "full_name") ??
+    readAttr(openedByRel, "email") ??
+    readAttr(entry, "opened_by_name") ??
+    readAttr(entry, "openedByName") ??
+    undefined
+  const openedById =
+    readAttr(openedByRel, "id") ?? openedByRel?.id ?? openedByRel?.getApiId?.() ?? undefined
+  const openedBy = openedByName ?? openedById
+
+  const info: PurchaseRequestInfo = {
+    providerName,
+    providerId,
+    requestedQty,
+    openedAt: openedAt ? String(openedAt) : undefined,
+    closedAt: closedAt ? String(closedAt) : undefined,
+    openedBy,
+  }
+
+  return { itemId, info }
+}
 
 export default function Page() {
   const [isLoading, setIsLoading] = React.useState(true)
@@ -38,8 +263,13 @@ export default function Page() {
   const [items, setItems] = React.useState<ItemResource[]>([])
   const [manufacturers, setManufacturers] = React.useState<ManufacturerResource[]>([])
   const [itemGroups, setItemGroups] = React.useState<ItemGroupResource[]>([])
-  const [confirmOpen, setConfirmOpen] = React.useState(false)
-  const [pendingRow, setPendingRow] = React.useState<Ferramenta | null>(null)
+  const [providers, setProviders] = React.useState<ProviderResource[]>([])
+  const [purchaseRequestMap, setPurchaseRequestMap] = React.useState<Record<number, PurchaseRequestInfo>>({})
+  const [preOrderOpen, setPreOrderOpen] = React.useState(false)
+  const [preOrderRow, setPreOrderRow] = React.useState<Ferramenta | null>(null)
+  const [preOrderProviderId, setPreOrderProviderId] = React.useState("")
+  const [preOrderQty, setPreOrderQty] = React.useState("")
+  const [preOrderSaving, setPreOrderSaving] = React.useState(false)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [deleting, setDeleting] = React.useState(false)
   const [deleteRow, setDeleteRow] = React.useState<Ferramenta | null>(null)
@@ -52,39 +282,147 @@ export default function Page() {
 
 
   React.useEffect(() => {
-    ItemResource.with(["manufacturer", "itemGroup" ]).get().then((response: PluralResponse<ItemResource>) => {
-      setItems(response.getData())
-    })
+    let mounted = true
+    const loadItems = async () => {
+      try {
+        const response = await ItemResource.with(["manufacturer", "itemGroup", "provider", "pcp", "avatar"]).get()
+        if (mounted) setItems((response as PluralResponse<ItemResource>).getData())
+      } catch {
+        if (mounted) toast.error("Nao foi possivel carregar itens.")
+      }
+    }
+
+    loadItems()
     ManufacturerResource.get().then((response: PluralResponse<ManufacturerResource>) => {
-      setManufacturers(response.getData())
+      if (mounted) setManufacturers(response.getData())
     })
     ItemGroupResource.get().then((response: PluralResponse<ItemGroupResource>) => {
-      setItemGroups(response.getData())
-      setIsLoading(false)
+      if (mounted) setItemGroups(response.getData())
+      if (mounted) setIsLoading(false)
     })
+    ProviderResource.get()
+      .then((response: PluralResponse<ProviderResource>) => {
+        if (mounted) setProviders(response.getData())
+      })
+      .catch(() => {
+        toast.error("Nao foi possivel carregar fornecedores.")
+      })
+
+    return () => {
+      mounted = false
+    }
   }, [])
+
+  const alertItemIds = React.useMemo(() => {
+    return items
+      .filter((item) => {
+        const active = !!item.getAttribute?.("active")
+        const minQty = Number(item.getAttribute?.("min_quantity") ?? 0)
+        const qty = Number(item.getAttribute?.("quantity") ?? 0)
+        return active && qty < minQty
+      })
+      .map((item) => Number(item.getApiId?.()))
+      .filter((id) => Number.isFinite(id))
+  }, [items])
+
+  const alertItemIdsKey = React.useMemo(() => alertItemIds.join(","), [alertItemIds])
+
+  React.useEffect(() => {
+    let mounted = true
+    if (!alertItemIds.length) {
+      setPurchaseRequestMap({})
+      return () => {
+        mounted = false
+      }
+    }
+
+    PurchaseRequestResource
+      .current({ item_ids: alertItemIds })
+      .then((response: any) => {
+        const payload = response?.axiosResponse?.data ?? response?.data ?? response
+        const dataRaw = payload?.data ?? payload?.data?.data ?? payload ?? []
+        const list = Array.isArray(dataRaw) ? dataRaw : []
+        const included = payload?.included ?? payload?.data?.included ?? []
+        const includedMap = buildIncludedMap(included)
+        const nextMap: Record<number, PurchaseRequestInfo> = {}
+
+        list.forEach((entry: any) => {
+          const parsed = parsePurchaseRequestEntry(entry, includedMap)
+          if (parsed?.itemId && parsed.info) {
+            nextMap[parsed.itemId] = parsed.info
+          }
+        })
+
+        if (mounted) setPurchaseRequestMap(nextMap)
+      })
+      .catch(() => {
+        if (mounted) toast.error("Nao foi possivel carregar pedidos de compra.")
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [alertItemIdsKey])
 
   React.useEffect(() => {
     const formatted = items.map((i) => {
       const manufacturer = i.getRelation("manufacturer") as ManufacturerResource | undefined
       const itemGroup = i.getRelation("itemGroup") as ItemGroupResource | undefined
       const provider = i.getRelation?.("provider") as ProviderResource | undefined
-      const preOrderedAttr = i.getAttribute("pre_ordered") ?? i.getAttribute("pre-ordered") ?? 0
+      const preOrderedAttr = i.getAttribute("pre_ordered") ?? i.getAttribute("pre-ordered") ?? false
+      const preOrdered =
+        typeof preOrderedAttr === "boolean"
+          ? preOrderedAttr
+          : Number(preOrderedAttr) === 1
       const fornecedorNome =
         provider?.getAttribute?.("company_name") ??
         provider?.getAttribute?.("name") ??
         i.getAttribute?.("supplier") ??
         ""
+      const basePurchaseRequest = extractPurchaseRequestInfo(i)
+      const mappedPurchaseRequest = purchaseRequestMap[Number(i.getApiId())]
+      const purchaseRequestRaw = mappedPurchaseRequest ?? basePurchaseRequest
+      const purchaseRequestProviderId = purchaseRequestRaw?.providerId
+      const providerMatch =
+        purchaseRequestProviderId
+          ? providers.find(
+              (p) => String(p.getApiId?.() ?? "") === String(purchaseRequestProviderId)
+            )
+          : undefined
+      const providerMatchName =
+        providerMatch?.getAttribute?.("company_name") ??
+        providerMatch?.getAttribute?.("name") ??
+        undefined
+      const purchaseRequest =
+        purchaseRequestRaw && !purchaseRequestRaw.providerName && providerMatchName
+          ? { ...purchaseRequestRaw, providerName: providerMatchName }
+          : purchaseRequestRaw
+      const groupIdRaw =
+        itemGroup?.getApiId?.() ??
+        i.getAttribute?.("item_group_id") ??
+        i.getAttribute?.("itemGroupId") ??
+        i.getAttribute?.("item_group") ??
+        null
+      const groupId = groupIdRaw != null ? String(groupIdRaw) : ""
+      const groupFromList = groupId
+        ? itemGroups.find((g) => String(g.getApiId?.() ?? g.getAttribute?.("id") ?? "") === groupId)
+        : undefined
+      const groupLabel =
+        groupFromList?.getAttribute?.("description") ??
+        itemGroup?.getAttribute?.("description") ??
+        ""
+
       return {
         id: Number(i.getApiId()),
         nome: i.getAttribute("name"),
         codigo: i.getAttribute("code"),
-        grupo: itemGroup?.getAttribute("description") || "",
+        grupo: groupLabel,
         fabricante: manufacturer?.getAttribute("description") || "",
         estoqueMinimo: Number(i.getAttribute("min_quantity") ?? 0),
         estoqueAtual: Number(i.getAttribute("quantity") ?? 0),
         fornecedor: fornecedorNome,
-        preOrdered: Number(preOrderedAttr),
+        preOrdered,
+        purchaseRequest,
         status: i.getAttribute("active") ? "Ativo" : "Inativo",
         resource: i,
         manufacturer,
@@ -93,7 +431,7 @@ export default function Page() {
       }
     })
     setRows(formatted)
-  }, [items])
+  }, [items, itemGroups, providers, purchaseRequestMap])
 
   const sortedRows = React.useMemo(() => {
     const copy = [...rows]
@@ -115,8 +453,8 @@ export default function Page() {
         Number(r.estoqueAtual) < Number(r.estoqueMinimo)
     )
     list.sort((a, b) => {
-      const aPO = Number(a.preOrdered) === 1 ? 1 : 0
-      const bPO = Number(b.preOrdered) === 1 ? 1 : 0
+      const aPO = a.preOrdered ? 1 : 0
+      const bPO = b.preOrdered ? 1 : 0
       if (aPO !== bPO) return aPO - bPO
       return String(a.nome).localeCompare(String(b.nome))
     })
@@ -128,34 +466,125 @@ export default function Page() {
     rowsRef.current = rows
   }, [rows])
 
-  const handleTogglePreOrder = React.useCallback(
-  (row: Ferramenta, checked: boolean) => {
-    const optimistic = checked ? 1 : 0;
-    const beforeVal = rowsRef.current.find(r => r.id === row.id)?.preOrdered ?? row.preOrdered
+  const openPreOrderModal = React.useCallback((row: Ferramenta) => {
+    setPreOrderRow(row)
+    const providerId =
+      row.purchaseRequest?.providerId ??
+      row.provider?.getApiId?.() ??
+      row.resource?.getAttribute?.("provider_id") ??
+      ""
+    const suggestedQty =
+      row.purchaseRequest?.requestedQty ??
+      Math.max(0, Number(row.estoqueMinimo) - Number(row.estoqueAtual))
+    setPreOrderProviderId(providerId ? String(providerId) : "")
+    setPreOrderQty(String(suggestedQty ?? ""))
+    setPreOrderOpen(true)
+  }, [])
 
-    setRows(prev => prev.map(r => (r.id === row.id ? { ...r, preOrdered: optimistic } : r)));
+  const handleDismarkPreOrder = React.useCallback((row: Ferramenta) => {
+    const prevRow = rowsRef.current.find(r => r.id === row.id) ?? row
+    const beforeVal = prevRow.preOrdered
+    const beforeRequest = prevRow.purchaseRequest ?? null
+    const nextRequest = beforeRequest
+      ? { ...beforeRequest, closedAt: beforeRequest.closedAt ?? new Date().toISOString() }
+      : beforeRequest
 
-    const p = checked
-      ? ItemResource.markAsPreOrdered([row.id])
-      : ItemResource.dismarkAsPreOrdered([row.id]);
+    setRows(prev => prev.map(r => (r.id === row.id ? { ...r, preOrdered: false, purchaseRequest: nextRequest } : r)))
+    setPurchaseRequestMap((prev) => {
+      const next = { ...prev }
+      delete next[row.id]
+      return next
+    })
+
+    const p = ItemResource.dismarkAsPreOrdered({ item_ids: [row.id] })
 
     toast.promise(p, {
       loading: "Atualizando pedido de compra...",
       success: "Status do pedido atualizado.",
-      error: "Não foi possível atualizar o status do pedido.",
-    });
+      error: "Nao foi possivel atualizar o status do pedido.",
+    })
 
     p.catch(() => {
-      setRows(prev => prev.map(r => (r.id === row.id ? { ...r, preOrdered: beforeVal } : r)));
-    });
-  },
-  [setRows]
-);
+      setRows(prev => prev.map(r => (r.id === row.id ? { ...r, preOrdered: beforeVal, purchaseRequest: beforeRequest } : r)))
+      if (beforeRequest) {
+        setPurchaseRequestMap((prev) => ({ ...prev, [row.id]: beforeRequest }))
+      }
+    })
+  }, [setRows, setPurchaseRequestMap])
 
-  const requestConfirmPreOrder = React.useCallback((row: Ferramenta) => {
-    setPendingRow(row)
-    setConfirmOpen(true)
-  }, [])
+  const handleConfirmPreOrder = React.useCallback(async () => {
+    if (!preOrderRow) return
+    const providerIdNum = Number(preOrderProviderId)
+    if (!Number.isFinite(providerIdNum) || providerIdNum <= 0) {
+      toast.error("Selecione um fornecedor.")
+      return
+    }
+    const requestedQtyNum = Number(preOrderQty)
+    if (!Number.isFinite(requestedQtyNum) || requestedQtyNum <= 0) {
+      toast.error("Informe a quantidade solicitada.")
+      return
+    }
+
+    const payload = {
+      items: [
+        { item_id: preOrderRow.id, provider_id: providerIdNum, requested_qty: requestedQtyNum },
+      ],
+    }
+
+    const providerName =
+      providers.find((p) => String(p.getApiId?.() ?? "") === String(providerIdNum))
+        ?.getAttribute?.("company_name") ??
+      providers.find((p) => String(p.getApiId?.() ?? "") === String(providerIdNum))
+        ?.getAttribute?.("name") ??
+      preOrderRow.fornecedor ??
+      ""
+
+    try {
+      setPreOrderSaving(true)
+      const p = ItemResource.markAsPreOrdered(payload)
+      toast.promise(p, {
+        loading: "Atualizando pedido de compra...",
+        success: "Pedido de compra registrado.",
+        error: "Nao foi possivel registrar o pedido.",
+      })
+      await p
+      setRows(prev =>
+        prev.map(r =>
+          r.id === preOrderRow.id
+            ? {
+                ...r,
+                preOrdered: true,
+                purchaseRequest: {
+                  providerId: providerIdNum,
+                  providerName,
+                  requestedQty: requestedQtyNum,
+                  openedAt: r.purchaseRequest?.openedAt,
+                  openedBy: r.purchaseRequest?.openedBy,
+                },
+              }
+            : r
+        )
+      )
+      setPurchaseRequestMap((prev) => ({
+        ...prev,
+        [preOrderRow.id]: {
+          providerId: providerIdNum,
+          providerName,
+          requestedQty: requestedQtyNum,
+          openedAt: preOrderRow.purchaseRequest?.openedAt,
+          openedBy: preOrderRow.purchaseRequest?.openedBy,
+        },
+      }))
+      setPreOrderOpen(false)
+      setPreOrderRow(null)
+      setPreOrderProviderId("")
+      setPreOrderQty("")
+    } catch {
+      // handled by toast.promise
+    } finally {
+      setPreOrderSaving(false)
+    }
+  }, [preOrderRow, preOrderProviderId, preOrderQty, providers, setPurchaseRequestMap])
 
   const handleDelete = React.useCallback(async (id: number) => {
     try {
@@ -235,19 +664,19 @@ export default function Page() {
                 <div className="text-center w-full">Pedido de compra feito?</div>
             ),
             cell: ({ row }) => {
-              const value = Number(row.original.preOrdered) === 1
+              const value = !!row.original.preOrdered
               return (
                 <div className="flex items-center justify-center gap-2 w-full">
                   <span className="text-xs text-muted-foreground">Não</span>
                   <Switch
                     checked={value}
                     onCheckedChange={(checked) => {
-                  if (checked) {
-                    requestConfirmPreOrder(row.original)
-                  } else {
-                    handleTogglePreOrder(row.original, false)
-                  }
-                }}
+                      if (checked) {
+                        openPreOrderModal(row.original)
+                      } else {
+                        handleDismarkPreOrder(row.original)
+                      }
+                    }}
                     aria-label="Marcar pedido de compra"
                   />
                   <span className="text-xs text-muted-foreground">Sim</span>
@@ -309,6 +738,7 @@ export default function Page() {
                         provider: dto.providerResource,
                         // Preserve current preOrdered status when editing other fields
                         preOrdered: r.preOrdered,
+                        purchaseRequest: r.purchaseRequest,
                       }
                     : r
                 )
@@ -316,6 +746,7 @@ export default function Page() {
             }
             manufacturers={manufacturers}
             itemGroups={itemGroups}
+            onGroupsUpdated={setItemGroups}
           />
         ),
       },
@@ -325,8 +756,8 @@ export default function Page() {
     tab,
     manufacturers,
     itemGroups,
-    handleTogglePreOrder,
-    requestConfirmPreOrder,
+    handleDismarkPreOrder,
+    openPreOrderModal,
     requestDelete
   ])
 
@@ -355,6 +786,7 @@ export default function Page() {
       title="Nova Ferramenta"
       manufacturers={manufacturers}
       itemGroups={itemGroups}
+      onGroupsUpdated={setItemGroups}
       onSubmit={(dto) => {
         const p = ItemResource.createOrUpdate(dto.clone().bindToSave())
         toast.promise(p, {
@@ -521,32 +953,76 @@ export default function Page() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialog
+            open={preOrderOpen}
+            onOpenChange={(open) => {
+              setPreOrderOpen(open)
+              if (!open) {
+                setPreOrderRow(null)
+                setPreOrderProviderId("")
+                setPreOrderQty("")
+              }
+            }}
+          >
             <AlertDialogContent>
-              <AlertDialogHeader className="flex flex-col items-center text-center gap-2">
-                <span
-                  aria-hidden
-                  className="inline-flex h-15 w-15 items-center justify-center rounded-full bg-yellow-100"
-                >
-                  <Image src={WarningCircleUrl} alt="" width={28} height={28} />
-                </span>
-                <AlertDialogTitle>Confirmar pedido de compra</AlertDialogTitle>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Registrar pedido de compra</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Deseja marcar <strong>{pendingRow?.nome}</strong> como
-                  {" "}“pedido de compra feito”? Essa ação moverá o item para o final da lista em “Alertas”.
+                  Selecione o fornecedor e informe a quantidade solicitada.
                 </AlertDialogDescription>
               </AlertDialogHeader>
+              <div className="grid gap-4 py-2 text-sm">
+                <div className="flex flex-col gap-2">
+                  <Label>Item</Label>
+                  <div className="rounded-md border px-3 py-2 text-sm">
+                    {preOrderRow?.nome ?? "-"}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="preorder-provider">Fornecedor</Label>
+                  <Select
+                    value={preOrderProviderId || undefined}
+                    onValueChange={setPreOrderProviderId}
+                  >
+                    <SelectTrigger id="preorder-provider">
+                      <SelectValue placeholder="Selecione um fornecedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {providers.map((provider) => (
+                        <SelectItem
+                          key={provider.getApiId?.() ?? provider.getAttribute?.("id")}
+                          value={provider.getApiId?.()?.toString?.() ?? ""}
+                        >
+                          {provider.getAttribute?.("company_name") ??
+                            provider.getAttribute?.("name") ??
+                            "-"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="preorder-qty">Quantidade solicitada</Label>
+                  <Input
+                    id="preorder-qty"
+                    type="number"
+                    min={1}
+                    value={preOrderQty}
+                    onChange={(e) => setPreOrderQty(e.target.value)}
+                  />
+                </div>
+              </div>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogCancel disabled={preOrderSaving}>Cancelar</AlertDialogCancel>
                 <AlertDialogAction
                   className="dark: text-white"
-                  onClick={() => {
-                    if (pendingRow) handleTogglePreOrder(pendingRow, true)
-                    setConfirmOpen(false)
-                    setPendingRow(null)
+                  onClick={(e) => {
+                    e.preventDefault()
+                    handleConfirmPreOrder()
                   }}
+                  disabled={preOrderSaving}
                 >
-                  Confirmar
+                  {preOrderSaving ? "Salvando..." : "Confirmar"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
