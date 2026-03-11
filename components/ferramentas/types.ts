@@ -1,4 +1,5 @@
 export interface PurchaseRequestInfo {
+  id?: number
   providerName?: string
   providerId?: number
   requestedQty?: number

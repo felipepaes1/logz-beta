@@ -259,10 +259,10 @@ export function FerramentaForm({
         const freshList = fresh?.getData?.() ?? []
         applyGroupList(freshList)
       } catch {
-        toast.error("Grupo atualizado, mas nao foi possivel atualizar a lista.")
+        toast.error("Grupo atualizado, mas não foi possível atualizar a lista.")
       }
     } catch {
-      toast.error("Nao foi possivel atualizar o grupo.")
+      toast.error("Não foi possível atualizar o grupo.")
     } finally {
       if (mountedRef.current) setUpdatingGroup(false)
     }
@@ -351,7 +351,7 @@ export function FerramentaForm({
 
   const handleAvatarFile = React.useCallback((file: File) => {
     if (!isAcceptedImage(file)) {
-      toast.error("Formato nao suportado. Use JPG ou PNG.")
+      toast.error("Formato não suportado. Use JPG ou PNG.")
       return
     }
     if (objectUrlRef.current) {
@@ -516,7 +516,7 @@ export function FerramentaForm({
         try {
           uploadedAttachment = await uploadAvatar(avatarFile)
         } catch {
-          toast.error("Nao foi possivel enviar a foto.")
+          toast.error("Não foi possível enviar a foto.")
           return
         }
       }

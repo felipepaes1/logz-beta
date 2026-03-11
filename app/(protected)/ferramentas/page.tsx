@@ -144,6 +144,9 @@ const extractPurchaseRequestInfo = (resource: ItemResource): PurchaseRequestInfo
     undefined
   const requestedQtyNum = Number(requestedQtyRaw)
   const requestedQty = Number.isFinite(requestedQtyNum) ? requestedQtyNum : undefined
+  const requestIdRaw = readAttr(pr, "id") ?? pr?.id ?? pr?.getApiId?.() ?? undefined
+  const requestIdNum = Number(requestIdRaw)
+  const requestId = Number.isFinite(requestIdNum) ? requestIdNum : undefined
 
   const openedAt =
     readAttr(pr, "opened_at") ??
@@ -160,10 +163,11 @@ const extractPurchaseRequestInfo = (resource: ItemResource): PurchaseRequestInfo
     readAttr(pr, "openedByName") ??
     undefined
 
-  const hasInfo = providerName || providerId || requestedQty || openedAt || closedAt || openedBy
+  const hasInfo = requestId || providerName || providerId || requestedQty || openedAt || closedAt || openedBy
   if (!hasInfo) return null
 
   return {
+    id: requestId,
     providerName,
     providerId,
     requestedQty,
@@ -225,6 +229,9 @@ const parsePurchaseRequestEntry = (entry: any, includedMap: Map<string, any>) =>
     undefined
   const requestedQtyNum = Number(requestedQtyRaw)
   const requestedQty = Number.isFinite(requestedQtyNum) ? requestedQtyNum : undefined
+  const requestIdRaw = readAttr(entry, "id") ?? entry?.id ?? entry?.getApiId?.() ?? undefined
+  const requestIdNum = Number(requestIdRaw)
+  const requestId = Number.isFinite(requestIdNum) ? requestIdNum : undefined
 
   const openedAt =
     readAttr(entry, "opened_at") ??
@@ -245,6 +252,7 @@ const parsePurchaseRequestEntry = (entry: any, includedMap: Map<string, any>) =>
   const openedBy = openedByName ?? openedById
 
   const info: PurchaseRequestInfo = {
+    id: requestId,
     providerName,
     providerId,
     requestedQty,
@@ -280,6 +288,21 @@ export default function Page() {
     setDeleteOpen(true)
   }, [])
 
+  const reloadItems = React.useCallback(async () => {
+    try {
+      const response = await ItemResource.with([
+        "manufacturer",
+        "itemGroup",
+        "provider",
+        "pcp",
+        "avatar",
+      ]).get()
+      setItems((response as PluralResponse<ItemResource>).getData())
+    } catch {
+      toast.error("Não foi possível atualizar itens.")
+    }
+  }, [])
+
 
   React.useEffect(() => {
     let mounted = true
@@ -288,7 +311,7 @@ export default function Page() {
         const response = await ItemResource.with(["manufacturer", "itemGroup", "provider", "pcp", "avatar"]).get()
         if (mounted) setItems((response as PluralResponse<ItemResource>).getData())
       } catch {
-        if (mounted) toast.error("Nao foi possivel carregar itens.")
+        if (mounted) toast.error("Não foi possível carregar itens.")
       }
     }
 
@@ -305,7 +328,7 @@ export default function Page() {
         if (mounted) setProviders(response.getData())
       })
       .catch(() => {
-        toast.error("Nao foi possivel carregar fornecedores.")
+        toast.error("Não foi possível carregar fornecedores.")
       })
 
     return () => {
@@ -356,7 +379,7 @@ export default function Page() {
         if (mounted) setPurchaseRequestMap(nextMap)
       })
       .catch(() => {
-        if (mounted) toast.error("Nao foi possivel carregar pedidos de compra.")
+        if (mounted) toast.error("Não foi possível carregar pedidos de compra.")
       })
 
     return () => {
@@ -501,7 +524,7 @@ export default function Page() {
     toast.promise(p, {
       loading: "Atualizando pedido de compra...",
       success: "Status do pedido atualizado.",
-      error: "Nao foi possivel atualizar o status do pedido.",
+      error: "Não foi possível atualizar o status do pedido.",
     })
 
     p.catch(() => {
@@ -545,46 +568,83 @@ export default function Page() {
       toast.promise(p, {
         loading: "Atualizando pedido de compra...",
         success: "Pedido de compra registrado.",
-        error: "Nao foi possivel registrar o pedido.",
+        error: "Não foi possível registrar o pedido.",
       })
       await p
+      setItems((prev) =>
+        prev.map((item) => {
+          const itemId = Number(item.getApiId?.() ?? item.getAttribute?.("id"))
+          if (itemId !== preOrderRow.id) return item
+          item.setAttribute?.("pre_ordered", true)
+          return item
+        })
+      )
+      const fallbackRequest: PurchaseRequestInfo = {
+        providerId: providerIdNum,
+        providerName,
+        requestedQty: requestedQtyNum,
+        openedAt: preOrderRow.purchaseRequest?.openedAt,
+        openedBy: preOrderRow.purchaseRequest?.openedBy,
+      }
+      let nextRequest: PurchaseRequestInfo = fallbackRequest
+
+      try {
+        const currentResponse = await PurchaseRequestResource.current({
+          item_id: preOrderRow.id,
+        })
+        const payload =
+          currentResponse?.axiosResponse?.data ??
+          currentResponse?.data ??
+          currentResponse
+        const dataRaw = payload?.data ?? payload?.data?.data ?? payload ?? []
+        const list = Array.isArray(dataRaw) ? dataRaw : []
+        const included = payload?.included ?? payload?.data?.included ?? []
+        const includedMap = buildIncludedMap(included)
+        const parsed = list
+          .map((entry) => parsePurchaseRequestEntry(entry, includedMap))
+          .find((entry) => entry?.itemId === preOrderRow.id)
+
+        if (parsed?.info) {
+          nextRequest = {
+            ...fallbackRequest,
+            ...parsed.info,
+            providerId: parsed.info.providerId ?? fallbackRequest.providerId,
+            providerName: parsed.info.providerName ?? fallbackRequest.providerName,
+            requestedQty: parsed.info.requestedQty ?? fallbackRequest.requestedQty,
+            openedAt: parsed.info.openedAt ?? fallbackRequest.openedAt,
+            openedBy: parsed.info.openedBy ?? fallbackRequest.openedBy,
+          }
+        }
+      } catch {
+        // keep fallback request info
+      }
+
       setRows(prev =>
         prev.map(r =>
           r.id === preOrderRow.id
             ? {
                 ...r,
                 preOrdered: true,
-                purchaseRequest: {
-                  providerId: providerIdNum,
-                  providerName,
-                  requestedQty: requestedQtyNum,
-                  openedAt: r.purchaseRequest?.openedAt,
-                  openedBy: r.purchaseRequest?.openedBy,
-                },
+                purchaseRequest: nextRequest,
               }
             : r
         )
       )
       setPurchaseRequestMap((prev) => ({
         ...prev,
-        [preOrderRow.id]: {
-          providerId: providerIdNum,
-          providerName,
-          requestedQty: requestedQtyNum,
-          openedAt: preOrderRow.purchaseRequest?.openedAt,
-          openedBy: preOrderRow.purchaseRequest?.openedBy,
-        },
+        [preOrderRow.id]: nextRequest,
       }))
       setPreOrderOpen(false)
       setPreOrderRow(null)
       setPreOrderProviderId("")
       setPreOrderQty("")
+      void reloadItems()
     } catch {
       // handled by toast.promise
     } finally {
       setPreOrderSaving(false)
     }
-  }, [preOrderRow, preOrderProviderId, preOrderQty, providers, setPurchaseRequestMap])
+  }, [preOrderRow, preOrderProviderId, preOrderQty, providers, reloadItems, setPurchaseRequestMap])
 
   const handleDelete = React.useCallback(async (id: number) => {
     try {
@@ -747,6 +807,7 @@ export default function Page() {
             manufacturers={manufacturers}
             itemGroups={itemGroups}
             onGroupsUpdated={setItemGroups}
+            onSaved={reloadItems}
           />
         ),
       },
@@ -758,7 +819,8 @@ export default function Page() {
     itemGroups,
     handleDismarkPreOrder,
     openPreOrderModal,
-    requestDelete
+    requestDelete,
+    reloadItems,
   ])
 
   const searchableColumns = React.useMemo(
