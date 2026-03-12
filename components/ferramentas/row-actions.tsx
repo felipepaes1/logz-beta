@@ -82,6 +82,37 @@ export function RowActions({ row, onRequestDelete, onSave, onSaved, manufacturer
     setGenerateEntryOpen(true)
   }, [requestedQtyValue])
 
+  const normalizeUnitPriceForApi = React.useCallback((value: string) => {
+    const trimmedValue = value.trim()
+    if (!trimmedValue) return ""
+
+    if (trimmedValue.includes(",") && trimmedValue.includes(".")) {
+      return trimmedValue.replace(/\./g, "").replace(",", ".")
+    }
+
+    return trimmedValue.replace(",", ".")
+  }, [])
+
+  const handleUnitPriceChange = React.useCallback((value: string) => {
+    const sanitizedValue = value
+      .replace(/[^\d.,]/g, "")
+      .replace(/\./g, ",")
+
+    const separatorIndex = sanitizedValue.indexOf(",")
+    if (separatorIndex === -1) {
+      setUnitPrice(sanitizedValue)
+      return
+    }
+
+    const integerPart = sanitizedValue.slice(0, separatorIndex)
+    const decimalPart = sanitizedValue
+      .slice(separatorIndex + 1)
+      .replace(/,/g, "")
+      .slice(0, 2)
+
+    setUnitPrice(`${integerPart},${decimalPart}`)
+  }, [])
+
   const handleConfirmGenerateEntry = React.useCallback(async () => {
     if (generatingEntry) return
     if (!purchaseRequestId) {
@@ -89,7 +120,7 @@ export function RowActions({ row, onRequestDelete, onSave, onSaved, manufacturer
       return
     }
 
-    const parsedUnitPrice = Number(unitPrice.replace(",", "."))
+    const parsedUnitPrice = Number(normalizeUnitPriceForApi(unitPrice))
     if (!Number.isFinite(parsedUnitPrice) || parsedUnitPrice <= 0) {
       toast.error("Informe um preço unitário válido.")
       return
@@ -120,7 +151,7 @@ export function RowActions({ row, onRequestDelete, onSave, onSaved, manufacturer
     } finally {
       setGeneratingEntry(false)
     }
-  }, [generatingEntry, onSaved, purchaseRequestId, quantity, unitPrice])
+  }, [generatingEntry, normalizeUnitPriceForApi, onSaved, purchaseRequestId, quantity, unitPrice])
   
   return (
     <>
@@ -271,13 +302,12 @@ export function RowActions({ row, onRequestDelete, onSave, onSaved, manufacturer
               <Label htmlFor={`unit-price-${row.id}`}>Preço unitário</Label>
               <Input
                 id={`unit-price-${row.id}`}
-                type="number"
-                min={0}
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={unitPrice}
-                onChange={(event) => setUnitPrice(event.target.value)}
+                onChange={(event) => handleUnitPriceChange(event.target.value)}
                 disabled={generatingEntry}
-                placeholder="Ex.: 123.45"
+                placeholder="Ex.: 123,45"
               />
             </div>
             <div className="flex flex-col gap-2">
