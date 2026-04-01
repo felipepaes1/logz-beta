@@ -11,40 +11,22 @@ import {
 import { Button } from "@/components/ui/button"
 import { Drawer } from "@/components/ui/drawer"
 import { IconDotsVertical } from "@tabler/icons-react"
-import { EntradaForm } from "./form-entrada"
-import { SaidaForm } from "./form-saida"
-import type { Movimento } from "./types"
-import { ItemResource } from "@/resources/Item/item.resource"
+import { toast } from "sonner"
+import { InventoryItemResource } from "@/resources/InventoryItem/inventory-item.resource"
 import type { InventoryItemParsed } from "@/resources/InventoryItem/inventory-item.dto"
-import { CollaboratorResource } from "@/resources/Collaborator/collaborator.resource"
-import { MachineResource } from "@/resources/Machine/machine.resource"
-import { PcpResource } from "@/resources/Pcp/pcp.resource"
-import type { MovementFormPayload } from "./movement-form"
+import type { MateriaPrimaConsumivel } from "./types"
+import { MateriaPrimaConsumivelForm } from "./form"
 
 interface RowActionsProps {
-  row: Movimento
-  onRequestDelete?: (row: Movimento) => void
-  onSubmit: (payload: MovementFormPayload) => Promise<unknown>
-  items: ItemResource[]
-  inventoryItems: InventoryItemParsed[]
-  collaborators: CollaboratorResource[]
-  machines: MachineResource[]
-  pcps: PcpResource[]
+  row: MateriaPrimaConsumivel
+  onRequestDelete: (row: MateriaPrimaConsumivel) => void
+  onSave: (item: InventoryItemParsed) => void
+  onSaved?: () => void
 }
 
-export function RowActions({
-  row,
-  onRequestDelete,
-  onSubmit,
-  items,
-  inventoryItems,
-  collaborators,
-  machines,
-  pcps,
-}: RowActionsProps) {
+export function RowActions({ row, onRequestDelete, onSave, onSaved }: RowActionsProps) {
   const [open, setOpen] = React.useState(false)
   const [menuOpen, setMenuOpen] = React.useState(false)
-  const Form = row.movementType === "IN" ? EntradaForm : SaidaForm
 
   return (
     <>
@@ -72,7 +54,7 @@ export function RowActions({
             className="text-destructive focus:text-destructive"
             onSelect={() => {
               setMenuOpen(false)
-              setTimeout(() => onRequestDelete?.(row), 0)
+              setTimeout(() => onRequestDelete(row), 0)
             }}
           >
             Excluir
@@ -82,19 +64,25 @@ export function RowActions({
 
       <Drawer open={open} onOpenChange={setOpen} direction="right">
         {open ? (
-          <Form
-            title={`Editar ${row.operacao.toLowerCase()}`}
-            movement={row}
-            items={items}
-            inventoryItems={inventoryItems}
-            collaborators={collaborators}
-            machines={machines}
-            pcps={pcps}
-            disableEdition
+          <MateriaPrimaConsumivelForm
+            title="Editar item"
+            resource={row.resource}
             onRequestClose={() => setOpen(false)}
-            onSubmit={async (payload) => {
-              await onSubmit(payload)
+            onSubmit={async (dto) => {
+              const request = InventoryItemResource.createOrUpdate(dto)
+              toast.promise(request, {
+                loading: "Salvando item...",
+                success: "Item atualizado!",
+                error: "Não foi possível salvar o item.",
+              })
+
+              const response = await request
+              if (response.data) {
+                onSave(response.data)
+              }
+              onSaved?.()
               setOpen(false)
+              return response
             }}
           />
         ) : null}
@@ -102,4 +90,3 @@ export function RowActions({
     </>
   )
 }
-

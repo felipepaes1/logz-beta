@@ -82,7 +82,7 @@ export default function Page() {
   const searchableColumns = React.useMemo(
     () => [
       { id: "nome", label: "Nome" },
-      { id: "codigo", label: "Codigo" },
+      { id: "codigo", label: "Código" },
       { id: "status", label: "Status" },
     ],
     []

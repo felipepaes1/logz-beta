@@ -37,7 +37,7 @@ const chartData = monthKeys.map((m) => ({
 
 const searchableColumns: Array<{ id: keyof Ferramenta | string; label?: string }> = [
   { id: "nome", label: "Nome da Ferramenta" },
-  { id: "codigo", label: "Codigo" },
+  { id: "codigo", label: "Código" },
   { id: "total", label: "Total" },
 ]
 

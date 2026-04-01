@@ -214,7 +214,7 @@ export function DashboardDateFilter() {
           </div>
 
           <div className="flex gap-2 pt-1 md:justify-end md:pt-0">
-            <Button type="submit" size="sm" disabled={loading}>
+            <Button type="submit" size="sm" className="dark:text-white" disabled={loading}>
               Aplicar
             </Button>
           </div>

@@ -827,7 +827,7 @@ export default function Page() {
     () => {
       const base = [
         { id: "nome", label: "Nome" },
-        { id: "codigo", label: "Codigo" },
+        { id: "codigo", label: "Código" },
         { id: "fabricante", label: "Fabricante" },
         { id: "fornecedor", label: "Fornecedor" },
       ]

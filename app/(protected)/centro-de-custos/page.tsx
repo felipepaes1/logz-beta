@@ -94,7 +94,7 @@ export default function Page() {
     () => [
       { id: "descricao", label: "Nome" },
       { id: "modelo", label: "Modelo" },
-      { id: "codigo", label: "Codigo" },
+      { id: "codigo", label: "Código" },
       { id: "status", label: "Status" },
     ],
     []

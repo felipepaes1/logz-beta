@@ -43,8 +43,8 @@ export function OrdemProducaoForm({ onSubmit, resource, title, onRequestClose }:
     const codigo = String(data.get("codigo") || "").trim()
 
     const newErrors: { descricao?: string; codigo?: string } = {}
-    if (!descricao) newErrors.descricao = "Campo obrigatorio"
-    if (!codigo) newErrors.codigo = "Campo obrigatorio"
+    if (!descricao) newErrors.descricao = "Campo obrigatório"
+    if (!codigo) newErrors.codigo = "Campo obrigatório"
 
     if (Object.keys(newErrors).length) {
       setErrors(newErrors)
@@ -88,7 +88,7 @@ export function OrdemProducaoForm({ onSubmit, resource, title, onRequestClose }:
       <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="descricao">Descricao</Label>
+            <Label htmlFor="descricao">Descrição</Label>
             <Input
               id="descricao"
               name="descricao"
@@ -101,7 +101,7 @@ export function OrdemProducaoForm({ onSubmit, resource, title, onRequestClose }:
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label htmlFor="codigo">Codigo</Label>
+            <Label htmlFor="codigo">Código</Label>
             <Input
               id="codigo"
               name="codigo"

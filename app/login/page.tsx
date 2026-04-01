@@ -131,7 +131,7 @@ export default function LoginPage() {
       <div className="flex flex-col basis-full lg:basis-[35%] items-center justify-center bg-black px-8 py-12">
         <Image
           src={logoDark}
-          alt="LogZ Tech"
+          alt="Log Z Tech"
           className="mb-6 h-32 w-32"
           priority
         />
@@ -168,7 +168,7 @@ export default function LoginPage() {
 
           <Button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 dark:text-white"
             disabled={loading}
           >
             {loading ? (
