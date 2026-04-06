@@ -390,12 +390,11 @@ export default function Page() {
   const loadItems = React.useCallback(async () => {
     const response = await ItemResource.with(["itemGroup"]).orderBy("code", "asc").get()
     const parsed = (response as PluralResponse<ItemResource>).getData()
-    setItems(parsed.filter((entry) => Boolean(entry.getAttribute("active"))))
+    setItems(parsed)
   }, [])
 
   const loadInventoryItems = React.useCallback(async () => {
     const response = await InventoryItemResource.list({
-      filter: { active: 1 },
       sort: "code",
       page: { limit: 1000, offset: 0 },
     })

@@ -129,6 +129,14 @@ function inventoryLabel(item?: InventoryItemParsed): string {
   return name || code
 }
 
+function movementItemLabel(movement?: Movimento): string {
+  if (!movement) return ""
+  const code = String(movement.codigo ?? "").trim()
+  const name = String(movement.item ?? "").trim()
+  if (code && name) return `${code} - ${name}`
+  return name || code
+}
+
 function movimentoSourceToFormSource(source?: Movimento["source"]): MovementFormSource | null {
   if (source === "component") return "component"
   if (source === "inventory") return "inventory"
@@ -248,27 +256,27 @@ export function MovementForm({
   const selectedComponent = React.useMemo(
     () =>
       source === "component" && itemId
-        ? activeComponents.find((entry) => entry.getApiId()?.toString() === itemId)
+        ? items.find((entry) => entry.getApiId()?.toString() === itemId)
         : undefined,
-    [activeComponents, itemId, source]
+    [itemId, items, source]
   )
   const selectedInventoryItem = React.useMemo(
     () =>
       source === "inventory" && itemId
-        ? activeInventoryItems.find((entry) => String(entry.id) === itemId)
+        ? inventoryItems.find((entry) => String(entry.id) === itemId)
         : undefined,
-    [activeInventoryItems, itemId, source]
+    [inventoryItems, itemId, source]
   )
   const selectedCollaborator = React.useMemo(
     () =>
       collaboratorId
-        ? activeCollaborators.find((entry) => entry.getApiId()?.toString() === collaboratorId)
+        ? collaborators.find((entry) => entry.getApiId()?.toString() === collaboratorId)
         : undefined,
-    [activeCollaborators, collaboratorId]
+    [collaboratorId, collaborators]
   )
   const selectedMachine = React.useMemo(
-    () => (machineId ? activeMachines.find((entry) => entry.getApiId()?.toString() === machineId) : undefined),
-    [activeMachines, machineId]
+    () => (machineId ? machines.find((entry) => entry.getApiId()?.toString() === machineId) : undefined),
+    [machineId, machines]
   )
   const selectedPcp = React.useMemo(
     () => (pcpId ? pcps.find((entry) => entry.getApiId()?.toString() === pcpId) : undefined),
@@ -373,14 +381,14 @@ export function MovementForm({
   }, [hasUnitPriceField, movement])
 
   React.useEffect(() => {
-    if (!source) return
+    if (!source || isEdition) return
     if (source === "component" && !activeComponents.some((entry) => entry.getApiId()?.toString() === itemId)) {
       setItemId("")
     }
     if (source === "inventory" && !activeInventoryItems.some((entry) => String(entry.id) === itemId)) {
       setItemId("")
     }
-  }, [activeComponents, activeInventoryItems, itemId, source])
+  }, [activeComponents, activeInventoryItems, isEdition, itemId, source])
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -444,12 +452,12 @@ export function MovementForm({
 
     const selectedCode =
       normalizedSource === "component"
-        ? String(selectedComponent?.getAttribute("code") ?? "")
-        : String(selectedInventoryItem?.code ?? "")
+        ? String(selectedComponent?.getAttribute("code") ?? movement?.codigo ?? "")
+        : String(selectedInventoryItem?.code ?? movement?.codigo ?? "")
     const selectedName =
       normalizedSource === "component"
-        ? String(selectedComponent?.getAttribute("name") ?? "")
-        : String(selectedInventoryItem?.name ?? "")
+        ? String(selectedComponent?.getAttribute("name") ?? movement?.item ?? "")
+        : String(selectedInventoryItem?.name ?? movement?.item ?? "")
 
     const payload: MovementFormPayload = {
       id: movement?.movementId ?? null,
@@ -494,13 +502,17 @@ export function MovementForm({
 
   const itemLabel = truncateText(
     source === "component"
-      ? componentLabel(selectedComponent)
+      ? componentLabel(selectedComponent) || movementItemLabel(movement)
       : source === "inventory"
-        ? inventoryLabel(selectedInventoryItem)
+        ? inventoryLabel(selectedInventoryItem) || movementItemLabel(movement)
         : ""
   )
-  const collaboratorLabel = truncateText(String(selectedCollaborator?.getAttribute("name") ?? ""))
-  const machineLabel = truncateText(String(selectedMachine?.getAttribute("description") ?? ""))
+  const collaboratorLabel = truncateText(
+    String(selectedCollaborator?.getAttribute("name") ?? movement?.responsavel ?? "")
+  )
+  const machineLabel = truncateText(
+    String(selectedMachine?.getAttribute("description") ?? movement?.maquina ?? "")
+  )
   const pcpLabel = truncateText(String(selectedPcp?.getAttribute("description") ?? ""))
 
   return (
