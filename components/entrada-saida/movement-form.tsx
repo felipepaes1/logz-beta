@@ -57,7 +57,6 @@ export interface MovementFormPayload {
 interface FormErrors {
   source?: string
   item?: string
-  collaborator?: string
   machine?: string
   quantity?: string
   unitPrice?: string
@@ -398,7 +397,6 @@ export function MovementForm({
 
     if (!source) nextErrors.source = "Selecione o macrogrupo"
     if (!itemId) nextErrors.item = "Campo obrigatório"
-    if (!collaboratorId) nextErrors.collaborator = "Campo obrigatório"
     if (movementType === "OUT" && !machineId) nextErrors.machine = "Campo obrigatório"
 
     const parsedQuantity = parseLocalizedNumber(quantity)
@@ -659,7 +657,20 @@ export function MovementForm({
             </div>
 
             <div className="flex flex-col gap-1">
-              <Label>Colaborador</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Colaborador (opcional)</Label>
+                {collaboratorId ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto px-2 py-1 text-xs"
+                    onClick={() => setCollaboratorId("")}
+                  >
+                    Limpar
+                  </Button>
+                ) : null}
+              </div>
               <Select
                 value={collaboratorId}
                 onValueChange={setCollaboratorId}
@@ -667,8 +678,11 @@ export function MovementForm({
                   if (!open) setCollaboratorSearch("")
                 }}
               >
-                <SelectTrigger className={cn("w-full min-w-0", errors.collaborator && "border-destructive")}>
-                  <SelectDisplay label={collaboratorLabel} placeholder="Selecione um colaborador" />
+                <SelectTrigger className="w-full min-w-0">
+                  <SelectDisplay
+                    label={collaboratorLabel}
+                    placeholder="Selecione um colaborador se desejar"
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectSearchInput
@@ -694,9 +708,6 @@ export function MovementForm({
                   )}
                 </SelectContent>
               </Select>
-              {errors.collaborator ? (
-                <span className="text-xs text-destructive">{errors.collaborator}</span>
-              ) : null}
             </div>
 
             <div className="flex flex-col gap-1">
