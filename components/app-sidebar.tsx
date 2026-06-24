@@ -9,6 +9,9 @@ import {
   IconArrowsSort,
   IconBuildingFactory2,
   IconListCheck,
+  IconCategoryPlus,
+  IconStack3,
+  IconReportAnalytics,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -68,7 +71,17 @@ export const sidebarData = {
     {
       title: "Matéria-prima e Consumíveis",
       url: "/materia-prima-e-consumiveis",
-      icon: IconArrowsSort,
+      icon: IconStack3,
+    },
+        {
+      title: "Grupos e Categorias",
+      url: "/grupos",
+      icon: IconCategoryPlus,
+    },
+    {
+      title: "Relatório PowerBI",
+      url: "/relatorio-powerbi",
+      icon: IconReportAnalytics,
     },
   ]
 }
@@ -91,6 +104,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       items = items.filter(
         (item) => item.url !== "/materia-prima-e-consumiveis"
       )
+    }
+
+    if (resolvedUser.tenant_id !== 6) {
+      items = items.filter((item) => item.url !== "/relatorio-powerbi")
     }
 
     if (resolvedUser.role_id === 5) {
