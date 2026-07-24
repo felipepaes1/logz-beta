@@ -44,7 +44,7 @@ export default function Page() {
   const columns = React.useMemo<ColumnDef<CentroCusto>[]>(
     () => [
       { accessorKey: "descricao", header: "Nome" },
-      { accessorKey: "modelo", header: "Modelo"},
+      { accessorKey: "modelo", header: "C.C."},
       { accessorKey: "codigo", header: "Código" },
       {
         accessorKey: "status",

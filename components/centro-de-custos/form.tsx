@@ -106,7 +106,7 @@ export function CentroCustoForm({ onSubmit, resource, title, onRequestClose }: C
             )}
           </div>
           <div className="flex flex-col gap-3">
-            <Label htmlFor="codigo">Modelo</Label>
+            <Label htmlFor="codigo">C.C.</Label>
             <Input
               id="modelo"
               name="modelo"
