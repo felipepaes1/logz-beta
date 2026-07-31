@@ -42,7 +42,10 @@ import {
 import { toast } from "sonner"
 import { ProviderResource } from "@/resources/Provider/provider.resource"
 import api_url from "@/services/api"
-import { AttachmentResource } from "@/resources/Attachment/attachment.resourse"
+import {
+  AttachmentResource,
+  buildAttachmentMediaUrl,
+} from "@/resources/Attachment/attachment.resourse"
 import { IconPencil } from "@tabler/icons-react"
 
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png"]
@@ -84,10 +87,7 @@ const isAcceptedImage = (file: File) => {
 }
 
 const buildPreviewUrl = (token?: string | null) => {
-  if (!token) return null
-  const tenantId = getTenantId()
-  if (!tenantId) return null
-  return `${api_url}/tenants/${tenantId}/attachments/${token}/preview`
+  return buildAttachmentMediaUrl(token, "preview") || null
 }
 
 const extractAttachmentId = (payload: any) =>
@@ -1151,5 +1151,4 @@ export function FerramentaForm({
     </DrawerContent>
   )
 }
-
 

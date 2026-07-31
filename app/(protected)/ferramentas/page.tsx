@@ -6,6 +6,7 @@ import { IconAlertCircle } from "@tabler/icons-react"
 import { DataTable } from "@/components/data-table"
 import type { ColumnDef } from "@tanstack/react-table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,6 +18,9 @@ import { PurchaseRequestResource } from "@/resources/PurchaseRequest/purchase-re
 import { PluralResponse } from "coloquent"
 import { FerramentaForm } from "@/components/ferramentas/form"
 import { RowActions } from "@/components/ferramentas/row-actions"
+import { ToolThumbnail } from "@/components/ferramentas/tool-thumbnail"
+import { ToolsReportsDownload } from "@/components/ferramentas/reports-download"
+import { Drawer, DrawerTrigger } from "@/components/ui/drawer"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import type { Ferramenta, PurchaseRequestInfo } from "@/components/ferramentas/types"
 import { toast } from "sonner"
@@ -281,7 +285,9 @@ export default function Page() {
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [deleting, setDeleting] = React.useState(false)
   const [deleteRow, setDeleteRow] = React.useState<Ferramenta | null>(null)
+  const [alertAddOpen, setAlertAddOpen] = React.useState(false)
   const focusRestoreRef = React.useRef<HTMLButtonElement>(null)
+  const alertAddFocusRestoreRef = React.useRef<HTMLButtonElement>(null)
 
   const requestDelete = React.useCallback((row: Ferramenta) => {
     setDeleteRow(row)
@@ -663,7 +669,22 @@ export default function Page() {
   const columns = React.useMemo<ColumnDef<Ferramenta>[]>(
     () => {
       const cols: ColumnDef<Ferramenta>[] = [
-      { accessorKey: "nome", header: "Nome", meta: { className: "max-w-[240px]", truncate: true } },
+      {
+        accessorKey: "nome",
+        header: "Nome",
+        cell: ({ row }) => (
+          <div className="flex min-w-0 items-center gap-3">
+            <ToolThumbnail
+              name={row.original.nome}
+              resource={row.original.resource}
+            />
+            <span className="truncate" title={row.original.nome}>
+              {row.original.nome}
+            </span>
+          </div>
+        ),
+        meta: { className: "min-w-[220px] max-w-[280px]" },
+      },
       { accessorKey: "codigo", header: "Código" },
       ...(tab === "alertas" ? [] : [{ accessorKey: "grupo", header: "Grupo", meta: { className: "max-w-[200px]", truncate: true } }] as ColumnDef<Ferramenta>[]),
       { accessorKey: "fabricante", header: "Fabricante", meta: { className: "max-w-[200px]", truncate: true } },
@@ -861,6 +882,39 @@ export default function Page() {
     />
   ), [manufacturers, itemGroups])
 
+  const alertHeaderActions = (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <ToolsReportsDownload />
+      <button
+        ref={alertAddFocusRestoreRef}
+        tabIndex={-1}
+        aria-hidden
+        className="sr-only"
+      />
+      <Drawer
+        open={alertAddOpen}
+        onOpenChange={setAlertAddOpen}
+        direction="right"
+      >
+        <DrawerTrigger asChild>
+          <Button size="sm" variant="outline">
+            Nova Ferramenta
+          </Button>
+        </DrawerTrigger>
+        {alertAddOpen
+          ? React.cloneElement(form, {
+              onRequestClose: () => {
+                setAlertAddOpen(false)
+                requestAnimationFrame(() =>
+                  alertAddFocusRestoreRef.current?.focus()
+                )
+              },
+            } as React.ComponentProps<typeof FerramentaForm>)
+          : null}
+      </Drawer>
+    </div>
+  )
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
@@ -945,8 +999,7 @@ export default function Page() {
                 key="alertas"
                 data={alertRows}
                 columns={columns}
-                addButtonLabel="Nova Ferramenta"
-                renderAddForm={form}
+                headerActions={alertHeaderActions}
                 isLoading={isLoading}
                 searchableColumns={searchableColumns}
                 searchPlaceholder="Buscar ferramenta por nome, código, fabricante ou fornecedor"

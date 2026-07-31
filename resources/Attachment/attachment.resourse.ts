@@ -1,6 +1,24 @@
 import { BaseResource } from "../../base/BaseResource";
 import api_url from "../../services/api";
 
+type AttachmentMediaType = 'preview' | 'thumbnail';
+
+export function buildAttachmentMediaUrl(
+    token?: string | null,
+    type: AttachmentMediaType = 'preview',
+    tenancyId?: string | null
+): string {
+    const selectedTenancyId =
+        tenancyId ??
+        (typeof window !== 'undefined'
+            ? localStorage.getItem('@tenancy_id') ?? ''
+            : '');
+
+    if (!token || !selectedTenancyId) return '';
+
+    return `${api_url}/tenants/${encodeURIComponent(selectedTenancyId)}/attachments/${encodeURIComponent(token)}/${type}`;
+}
+
 export class AttachmentResource extends BaseResource{
     protected jsonApiType = 'tenants/:tenant_id/attachments';
 
@@ -17,7 +35,7 @@ export class AttachmentResource extends BaseResource{
     }
 
     public getPreviewUrl(): string {
-        return `${api_url}/${this.jsonApiType}/${this.getToken()}/preview`;
+        return buildAttachmentMediaUrl(this.getToken(), 'preview');
     }
 
     public getDownloadUrlWithTenancy(tenancyId: string): string{
@@ -27,7 +45,7 @@ export class AttachmentResource extends BaseResource{
     
 
     public getThumbnailUrl(): string {
-        return `${api_url}/${this.jsonApiType}/${this.getToken()}/thumbnail`;
+        return buildAttachmentMediaUrl(this.getToken(), 'thumbnail');
     }
 
     public setFile(file: File): void {

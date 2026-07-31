@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { EntradaForm } from "@/components/entrada-saida/form-entrada"
 import { SaidaForm } from "@/components/entrada-saida/form-saida"
 import { RowActions } from "@/components/entrada-saida/row-actions"
+import { OutputsReportDownload } from "@/components/entrada-saida/outputs-report-download"
 import type { MovementFormPayload } from "@/components/entrada-saida/movement-form"
 import type { Movimento, MovimentoSource } from "@/components/entrada-saida/types"
 import type { ComponentDto } from "@/resources/Component/component.dto"
@@ -628,6 +629,13 @@ export default function Page() {
     </>
   )
 
+  const saidasHeaderActions = (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      <OutputsReportDownload />
+      {headerActions}
+    </div>
+  )
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
@@ -693,7 +701,7 @@ export default function Page() {
                 data={saidasRows}
                 onDataChange={setRows}
                 columns={columns}
-                headerActions={headerActions}
+                headerActions={saidasHeaderActions}
                 isLoading={isLoading}
                 searchableColumns={searchColumnsSaidas}
                 searchPlaceholder="Buscar saída por data, macrogrupo, código, item, responsável ou máquina"

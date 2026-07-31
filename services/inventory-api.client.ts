@@ -14,6 +14,20 @@ import type {
 import { InventoryMovementResource } from "@/resources/InventoryMovement/inventory-movement.resource"
 import type { MovementsFeedQuery, MovementsFeedResult } from "@/resources/Movement/movement.dto"
 import { MovementResource } from "@/resources/Movement/movement.resource"
+import {
+  ComponentOutputsReportResource,
+  type ComponentOutputsReportPeriod,
+  type ComponentOutputsReportResponse,
+} from "@/resources/Report/component-outputs-report.resource"
+import {
+  ToolPurchaseRequestReportResource,
+  type ToolPurchaseRequestReportResponse,
+} from "@/resources/Report/tool-purchase-request-report.resource"
+import {
+  StockReplenishmentReportResource,
+  type StockReplenishmentPeriod,
+  type StockReplenishmentReportResponse,
+} from "@/resources/Report/stock-replenishment-report.resource"
 
 export const inventoryApiClient = {
   getInventoryItems(query?: InventoryItemsQuery): Promise<InventoryItemsListResult> {
@@ -69,5 +83,21 @@ export const inventoryApiClient = {
 
   getMovements(query?: MovementsFeedQuery): Promise<MovementsFeedResult> {
     return MovementResource.list(query)
+  },
+
+  downloadComponentOutputsReport(
+    period: ComponentOutputsReportPeriod
+  ): Promise<ComponentOutputsReportResponse> {
+    return ComponentOutputsReportResource.download(period)
+  },
+
+  downloadToolPurchaseRequestReport(): Promise<ToolPurchaseRequestReportResponse> {
+    return ToolPurchaseRequestReportResource.download()
+  },
+
+  downloadStockReplenishmentReport(
+    period: StockReplenishmentPeriod
+  ): Promise<StockReplenishmentReportResponse> {
+    return StockReplenishmentReportResource.download(period)
   },
 }

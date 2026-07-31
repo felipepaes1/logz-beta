@@ -9,7 +9,6 @@ import {
   IconArrowsSort,
   IconBuildingFactory2,
   IconListCheck,
-  IconCategoryPlus,
   IconStack3,
   IconReportAnalytics,
 } from "@tabler/icons-react"
@@ -72,11 +71,6 @@ export const sidebarData = {
       title: "Matéria-prima e Consumíveis",
       url: "/materia-prima-e-consumiveis",
       icon: IconStack3,
-    },
-        {
-      title: "Grupos e Categorias",
-      url: "/grupos",
-      icon: IconCategoryPlus,
     },
     {
       title: "Relatório PowerBI",
