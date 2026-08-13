@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { ProviderResource } from "@/resources/Provider/provider.resource"
+import { MachineResource } from "@/resources/Machine/machine.resource"
 import api_url from "@/services/api"
 import {
   AttachmentResource,
@@ -105,6 +106,24 @@ const extractAttachmentToken = (payload: any) =>
   payload?.token ??
   null
 
+const unwrapApiPayload = (response: any) =>
+  response?.axiosResponse?.data ?? response?.data ?? response
+
+const extractMachineIds = (response: any): string[] => {
+  const payload = unwrapApiPayload(response)
+  const relationData =
+    payload?.data?.relationships?.machines?.data ??
+    payload?.relationships?.machines?.data ??
+    []
+
+  return Array.isArray(relationData)
+    ? relationData
+        .map((machine: any) => machine?.id)
+        .filter((id: any) => id !== undefined && id !== null)
+        .map((id: any) => String(id))
+    : []
+}
+
 interface FerramentaFormProps {
   onSubmit: (dto: ItemDto) => Promise<unknown>
   resource?: ItemResource
@@ -157,6 +176,11 @@ export function FerramentaForm({
   const [newManufacturerName, setNewManufacturerName] = React.useState("")
   const [creatingManufacturer, setCreatingManufacturer] = React.useState(false)
   const [providers, setProviders] = React.useState<ProviderResource[]>([])
+  const [machines, setMachines] = React.useState<MachineResource[]>([])
+  const [selectedMachineIds, setSelectedMachineIds] = React.useState<string[]>([])
+  const [machinesDialogOpen, setMachinesDialogOpen] = React.useState(false)
+  const [machinesLoading, setMachinesLoading] = React.useState(false)
+  const [machinesSaving, setMachinesSaving] = React.useState(false)
   const [providerId, setProviderId] = React.useState<string>(
     resource?.getRelation?.("provider")?.getApiId?.()?.toString?.() ??
     resource?.getAttribute?.("provider_id")?.toString?.() ??
@@ -174,6 +198,9 @@ export function FerramentaForm({
     codigo?: string
     itemGroup?: string
     manufacturer?: string
+    drawer?: string
+    position?: string
+    dailyRequestLimit?: string
   }>({})
   const selectItemClass =
     "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
@@ -330,6 +357,61 @@ export function FerramentaForm({
     null
 
   React.useEffect(() => {
+    let mounted = true
+
+    if (!resourceId) {
+      setMachines([])
+      setSelectedMachineIds([])
+      setMachinesLoading(false)
+      return () => {
+        mounted = false
+      }
+    }
+
+    setMachinesLoading(true)
+    Promise.all([MachineResource.get(), ItemResource.showWithMachines(resourceId)])
+      .then(([machineResponse, itemResponse]) => {
+        if (!mounted) return
+        setMachines(machineResponse?.getData?.() ?? [])
+        setSelectedMachineIds(extractMachineIds(itemResponse))
+      })
+      .catch(() => {
+        if (mounted) toast.error("Não foi possível carregar as máquinas permitidas.")
+      })
+      .finally(() => {
+        if (mounted) setMachinesLoading(false)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [resourceId])
+
+  const toggleMachine = React.useCallback((machineId: string) => {
+    setSelectedMachineIds((current) =>
+      current.includes(machineId)
+        ? current.filter((id) => id !== machineId)
+        : [...current, machineId]
+    )
+  }, [])
+
+  const saveMachineAssociations = React.useCallback(async () => {
+    if (!resourceId) return
+
+    try {
+      setMachinesSaving(true)
+      const response = await ItemResource.updateMachines(resourceId, selectedMachineIds)
+      setSelectedMachineIds(extractMachineIds(response))
+      toast.success("Máquinas permitidas atualizadas!")
+      setMachinesDialogOpen(false)
+    } catch (error: any) {
+      toast.error(error?.message ?? "Não foi possível salvar as máquinas permitidas.")
+    } finally {
+      setMachinesSaving(false)
+    }
+  }, [resourceId, selectedMachineIds])
+
+  React.useEffect(() => {
     if (objectUrlRef.current) {
       URL.revokeObjectURL(objectUrlRef.current)
       objectUrlRef.current = null
@@ -469,12 +551,36 @@ export function FerramentaForm({
     const providerRsc = providers.find((p) => p.getApiId()?.toString() === providerId)
     const observationRaw = data.get("observation")?.toString() ?? ""
     const observation = observationRaw.trim() || null
+    const drawerRaw = data.get("drawer")?.toString().trim() ?? ""
+    const positionRaw = data.get("position")?.toString().trim() ?? ""
+    const dailyRequestLimitRaw = data.get("daily_request_limit")?.toString().trim() ?? ""
+    const drawer = drawerRaw ? Number(drawerRaw) : null
+    const position = positionRaw ? Number(positionRaw) : null
+    const dailyRequestLimit = dailyRequestLimitRaw ? Number(dailyRequestLimitRaw) : null
 
     const newErrors: typeof errors = {}
     if (!nome) newErrors.nome = "Campo obrigatório"
     if (!codigo) newErrors.codigo = "Campo obrigatório"
     if (!itemGroupId) newErrors.itemGroup = "Campo obrigatório"
     if (!manufacturerId) newErrors.manufacturer = "Campo obrigatório"
+    if (
+      drawer !== null &&
+      (!Number.isInteger(drawer) || drawer < 1 || drawer > 999)
+    ) {
+      newErrors.drawer = "Informe um inteiro entre 1 e 999 ou deixe vazio"
+    }
+    if (
+      position !== null &&
+      (!Number.isInteger(position) || position < 1 || position > 999)
+    ) {
+      newErrors.position = "Informe um inteiro entre 1 e 999 ou deixe vazio"
+    }
+    if (
+      dailyRequestLimit !== null &&
+      (!Number.isInteger(dailyRequestLimit) || dailyRequestLimit < 0)
+    ) {
+      newErrors.dailyRequestLimit = "Informe um inteiro maior ou igual a 0 ou deixe vazio"
+    }
 
     if (Object.keys(newErrors).length) {
       setErrors(newErrors)
@@ -491,6 +597,9 @@ export function FerramentaForm({
     const minQuantityValue = Number(data.get("estoqueMinimo") || 0)
     dto.min_quantity = minQuantityValue
     dto.observation = observation
+    dto.drawer = drawer
+    dto.position = position
+    dto.daily_request_limit = dailyRequestLimit
     // Preserve current estoque (quantity) when editing; only initialize on create
     dto.quantity = resource?.getAttribute?.("quantity") ?? 0
     dto.manufacturerResource = manufacturerRsc
@@ -538,6 +647,9 @@ export function FerramentaForm({
         updatedResource.setAttribute?.("min_quantity", dto.min_quantity)
         updatedResource.setAttribute?.("observation", dto.observation)
         updatedResource.setAttribute?.("quantity", dto.quantity)
+        updatedResource.setAttribute?.("drawer", dto.drawer)
+        updatedResource.setAttribute?.("position", dto.position)
+        updatedResource.setAttribute?.("daily_request_limit", dto.daily_request_limit)
         updatedResource.setAttribute?.("avatar_id", avatarIdToSave ?? null)
         updatedResource.setRelation?.("manufacturer", manufacturerRsc ?? null)
         updatedResource.setRelation?.("itemGroup", itemGroupRsc ?? null)
@@ -663,6 +775,46 @@ export function FerramentaForm({
             {errors.codigo && (
               <span className="text-destructive text-xs">{errors.codigo}</span>
             )}
+          </div>
+
+          {/* Localizacao */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="drawer">Gaveta</Label>
+              <Input
+                id="drawer"
+                name="drawer"
+                type="number"
+                min={1}
+                max={999}
+                step={1}
+                inputMode="numeric"
+                placeholder="1 a 999"
+                defaultValue={resource?.getAttribute("drawer")?.toString() ?? ""}
+                className={cn(errors.drawer && "border-destructive")}
+              />
+              {errors.drawer && (
+                <span className="text-destructive text-xs">{errors.drawer}</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="position">Posição</Label>
+              <Input
+                id="position"
+                name="position"
+                type="number"
+                min={1}
+                max={999}
+                step={1}
+                inputMode="numeric"
+                placeholder="1 a 999"
+                defaultValue={resource?.getAttribute("position")?.toString() ?? ""}
+                className={cn(errors.position && "border-destructive")}
+              />
+              {errors.position && (
+                <span className="text-destructive text-xs">{errors.position}</span>
+              )}
+            </div>
           </div>
 
           {/* Grupo */}
@@ -800,6 +952,55 @@ export function FerramentaForm({
             />
           </div>
 
+          {/* Limite de requisições diário */}
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="daily_request_limit">Limite de requisições diário</Label>
+            <Input
+              id="daily_request_limit"
+              name="daily_request_limit"
+              type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
+              placeholder="Sem limite"
+              defaultValue={
+                resource?.getAttribute("daily_request_limit")?.toString() ?? ""
+              }
+              className={cn(errors.dailyRequestLimit && "border-destructive")}
+            />
+            {errors.dailyRequestLimit && (
+              <span className="text-destructive text-xs">{errors.dailyRequestLimit}</span>
+            )}
+          </div>
+
+          {/* Máquinas permitidas */}
+          <div className="flex flex-col gap-2 rounded-md border border-dashed p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col gap-1">
+                <Label>Máquinas permitidas</Label>
+                <span className="text-xs text-muted-foreground">
+                  Defina quais máquinas podem solicitar esta ferramenta.
+                </span>
+              </div>
+              <span className="shrink-0 text-xs text-muted-foreground">
+                {resourceId ? `${selectedMachineIds.length} selecionada(s)` : "Após cadastrar"}
+              </span>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setMachinesDialogOpen(true)}
+              disabled={!resourceId || machinesLoading || submitting}
+            >
+              {machinesLoading ? "Carregando máquinas..." : "Selecionar máquinas"}
+            </Button>
+            {!resourceId && (
+              <span className="text-xs text-muted-foreground">
+                Salve a ferramenta primeiro para cadastrar as associações.
+              </span>
+            )}
+          </div>
+
           {/* Fornecedor */}
           <div className="flex flex-col gap-3">
             <Label>Fornecedor</Label>
@@ -907,6 +1108,90 @@ export function FerramentaForm({
           />
           <AlertDialogFooter>
             <AlertDialogCancel type="button">Fechar</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <AlertDialog
+        open={machinesDialogOpen}
+        onOpenChange={(open) => {
+          if (!machinesSaving) setMachinesDialogOpen(open)
+        }}
+      >
+        <AlertDialogContent className="sm:max-w-lg">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Máquinas permitidas</AlertDialogTitle>
+            <AlertDialogDescription>
+              Selecione as máquinas que poderão realizar solicitações desta ferramenta.
+              Essa configuração apenas registra a associação.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-80 overflow-y-auto py-1">
+            {machines.length ? (
+              <div className="grid gap-2 sm:grid-cols-2">
+                {machines.map((machine, index) => {
+                  const machineId = String(
+                    machine.getApiId?.() ?? machine.getAttribute?.("id") ?? `machine-${index}`
+                  )
+                  const code = machine.getAttribute?.("code") ?? ""
+                  const description =
+                    machine.getAttribute?.("description") ?? `Máquina ${machineId}`
+                  const active = machine.getAttribute?.("active")
+                  const selected = selectedMachineIds.includes(machineId)
+
+                  return (
+                    <button
+                      key={machineId}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => toggleMachine(machineId)}
+                      className={cn(
+                        "flex min-w-0 items-center gap-3 rounded-md border px-3 py-2 text-left transition-colors",
+                        "hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        selected && "border-primary bg-primary/5",
+                        active === false && "opacity-70"
+                      )}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "flex size-5 shrink-0 items-center justify-center rounded-full border-2 transition-colors",
+                          selected ? "border-primary" : "border-muted-foreground/40"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "size-2 rounded-full transition-transform",
+                            selected ? "scale-100 bg-primary" : "scale-0"
+                          )}
+                        />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-medium">
+                          {code ? `${code} — ` : ""}{description}
+                        </span>
+                        {active === false && (
+                          <span className="block text-xs text-muted-foreground">Inativa</span>
+                        )}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                Nenhuma máquina disponível.
+              </p>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={machinesSaving}>Cancelar</AlertDialogCancel>
+            <Button
+              type="button"
+              onClick={saveMachineAssociations}
+              disabled={machinesSaving || machinesLoading}
+            >
+              {machinesSaving ? "Salvando..." : "Salvar associações"}
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1151,4 +1436,3 @@ export function FerramentaForm({
     </DrawerContent>
   )
 }
-

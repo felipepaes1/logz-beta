@@ -16,6 +16,9 @@ export class ItemDto extends BaseDTO {
     public code: string;
     public quantity: number;
     public min_quantity: number;
+    public drawer: number | null = null;
+    public position: number | null = null;
+    public daily_request_limit: number | null = null;
 
     public avatar_id?: number | string | null;
     public avatar?: any;
@@ -48,6 +51,10 @@ export class ItemDto extends BaseDTO {
         this.active = !!resource?.getAttribute('active');
         this.quantity = resource?.getAttribute('quantity');
         this.min_quantity = resource?.getAttribute('min_quantity');
+        this.drawer = resource?.getAttribute('drawer') ?? null;
+        this.position = resource?.getAttribute('position') ?? null;
+        const dailyRequestLimit = resource?.getAttribute('daily_request_limit');
+        this.daily_request_limit = dailyRequestLimit == null ? null : Number(dailyRequestLimit);
         this.itemResource = resource;
         this.manufacturerResource = resource.getRelation('manufacturer');
         this.itemGroupResource = resource.getRelation('itemGroup');

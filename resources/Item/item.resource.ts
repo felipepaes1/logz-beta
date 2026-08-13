@@ -10,6 +10,21 @@ import { ProviderResource } from "../Provider/provider.resource";
 export class ItemResource extends BaseResource {
     public static jsonApiType = 'tenants/:tenant_id/items';
 
+    public static async showWithMachines(itemId: number | string): Promise<any> {
+        const base = (this.jsonApiType as string);
+        return this.getHttpClient().get(`${base}/${itemId}`, { include: 'machines' });
+    }
+
+    public static async updateMachines(
+        itemId: number | string,
+        machineIds: Array<number | string>,
+    ): Promise<any> {
+        const base = (this.jsonApiType as string);
+        return this.getHttpClient().put(`${base}/${itemId}/machines`, {
+            machine_ids: machineIds.map((id) => Number(id)),
+        });
+    }
+
     public static async createOrUpdate(itemDto: ItemDto): Promise<any> {
         return this.action('create-or-update', {item_dto: itemDto});
     }

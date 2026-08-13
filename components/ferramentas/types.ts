@@ -16,6 +16,7 @@ export interface Ferramenta {
   fabricante: string
   estoqueMinimo: number
   estoqueAtual: number
+  daily_request_limit: number | null
   fornecedor: string
   status: string
   preOrderer?: number

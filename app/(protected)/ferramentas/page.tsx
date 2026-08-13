@@ -408,6 +408,9 @@ export default function Page() {
         provider?.getAttribute?.("name") ??
         i.getAttribute?.("supplier") ??
         ""
+      const dailyRequestLimitRaw = i.getAttribute?.("daily_request_limit")
+      const daily_request_limit =
+        dailyRequestLimitRaw == null ? null : Number(dailyRequestLimitRaw)
       const basePurchaseRequest = extractPurchaseRequestInfo(i)
       const mappedPurchaseRequest = purchaseRequestMap[Number(i.getApiId())]
       const purchaseRequestRaw = mappedPurchaseRequest ?? basePurchaseRequest
@@ -449,6 +452,7 @@ export default function Page() {
         fabricante: manufacturer?.getAttribute("description") || "",
         estoqueMinimo: Number(i.getAttribute("min_quantity") ?? 0),
         estoqueAtual: Number(i.getAttribute("quantity") ?? 0),
+        daily_request_limit,
         fornecedor: fornecedorNome,
         preOrdered,
         purchaseRequest,
@@ -807,6 +811,7 @@ export default function Page() {
                           "",
                         estoqueMinimo: dto.min_quantity,
                         estoqueAtual: dto.quantity,
+                        daily_request_limit: dto.daily_request_limit,
                         fornecedor:
                           dto.providerResource?.getAttribute?.("company_name") ??
                           dto.providerResource?.getAttribute?.("name") ??

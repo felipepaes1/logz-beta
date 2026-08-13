@@ -368,6 +368,8 @@ export function DataTable<T extends { id: number }>({
   }
 
   const extraColCount = withDragHandle ? 1 : 0
+  const visibleRowCount = table.getRowModel().rows.length
+  const totalRowCount = table.getFilteredRowModel().rows.length
 
   return (
     
@@ -481,7 +483,7 @@ export function DataTable<T extends { id: number }>({
 
         <div className="flex items-center justify-between px-4">
           <div className="hidden flex-1 text-sm text-muted-foreground lg:flex">
-            {table.getFilteredSelectedRowModel().rows.length} de {table.getFilteredRowModel().rows.length} linha(s) selecionadas.
+            Mostrando {visibleRowCount} registro{visibleRowCount === 1 ? "" : "s"} de {totalRowCount} registrado{totalRowCount === 1 ? "" : "s"}
           </div>
           <div className="flex w-full items-center gap-8 lg:w-fit">
             <div className="hidden items-center gap-2 lg:flex">
