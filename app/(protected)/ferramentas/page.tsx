@@ -452,6 +452,8 @@ export default function Page() {
         fabricante: manufacturer?.getAttribute("description") || "",
         estoqueMinimo: Number(i.getAttribute("min_quantity") ?? 0),
         estoqueAtual: Number(i.getAttribute("quantity") ?? 0),
+        drawer: i.getAttribute("drawer") == null ? null : Number(i.getAttribute("drawer")),
+        position: i.getAttribute("position") == null ? null : Number(i.getAttribute("position")),
         daily_request_limit,
         fornecedor: fornecedorNome,
         preOrdered,
@@ -795,45 +797,66 @@ export default function Page() {
           <RowActions
             row={row.original}
             onRequestDelete={requestDelete}
-            onSave={(dto) =>
+            onSave={(dto) => {
+              const itemId = Number(dto.id)
+
               setRows((prev) =>
-                prev.map((r) =>
-                  r.id === Number(dto.id)
-                    ? {
-                        ...r,
-                        nome: dto.name,
-                        codigo: dto.code,
-                        grupo:
-                          dto.itemGroupResource?.getAttribute("description") ||
-                          "",
-                        fabricante:
-                          dto.manufacturerResource?.getAttribute("description") ||
-                          "",
-                        estoqueMinimo: dto.min_quantity,
-                        estoqueAtual: dto.quantity,
-                        daily_request_limit: dto.daily_request_limit,
-                        fornecedor:
-                          dto.providerResource?.getAttribute?.("company_name") ??
-                          dto.providerResource?.getAttribute?.("name") ??
-                          dto.supplier ??
-                          "",
-                        status: dto.active ? "Ativo" : "Inativo",
-                        resource: dto.itemResource,
-                        manufacturer: dto.manufacturerResource,
-                        itemGroup: dto.itemGroupResource,
-                        provider: dto.providerResource,
-                        // Preserve current preOrdered status when editing other fields
-                        preOrdered: r.preOrdered,
-                        purchaseRequest: r.purchaseRequest,
-                      }
-                    : r
-                )
+                prev.map((r) => {
+                  if (r.id !== itemId) return r
+
+                  // Keep the in-memory resource in sync with the submitted DTO.
+                  // The edit form reads drawer/position from this resource when it
+                  // is opened again, before any list reload happens.
+                  const resource = dto.itemResource ?? r.resource
+                  resource?.setAttribute?.("drawer", dto.drawer)
+                  resource?.setAttribute?.("position", dto.position)
+                  resource?.setAttribute?.("daily_request_limit", dto.daily_request_limit)
+
+                  return {
+                    ...r,
+                    nome: dto.name,
+                    codigo: dto.code,
+                    grupo:
+                      dto.itemGroupResource?.getAttribute("description") ||
+                      "",
+                    fabricante:
+                      dto.manufacturerResource?.getAttribute("description") ||
+                      "",
+                    estoqueMinimo: dto.min_quantity,
+                    estoqueAtual: dto.quantity,
+                    drawer: dto.drawer,
+                    position: dto.position,
+                    daily_request_limit: dto.daily_request_limit,
+                    fornecedor:
+                      dto.providerResource?.getAttribute?.("company_name") ??
+                      dto.providerResource?.getAttribute?.("name") ??
+                      dto.supplier ??
+                      "",
+                    status: dto.active ? "Ativo" : "Inativo",
+                    resource,
+                    manufacturer: dto.manufacturerResource,
+                    itemGroup: dto.itemGroupResource,
+                    provider: dto.providerResource,
+                    // Preserve current preOrdered status when editing other fields
+                    preOrdered: r.preOrdered,
+                    purchaseRequest: r.purchaseRequest,
+                  }
+                })
               )
-            }
+
+              // Keep the source collection aligned too. Otherwise the next
+              // unrelated items update could rebuild rows from an older resource.
+              if (dto.itemResource) {
+                setItems((prev) =>
+                  prev.map((item) =>
+                    Number(item.getApiId?.()) === itemId ? dto.itemResource! : item
+                  )
+                )
+              }
+            }}
             manufacturers={manufacturers}
             itemGroups={itemGroups}
             onGroupsUpdated={setItemGroups}
-            onSaved={reloadItems}
           />
         ),
       },
@@ -846,7 +869,6 @@ export default function Page() {
     handleDismarkPreOrder,
     openPreOrderModal,
     requestDelete,
-    reloadItems,
   ])
 
   const searchableColumns = React.useMemo(

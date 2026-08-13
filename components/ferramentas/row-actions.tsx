@@ -226,8 +226,6 @@ export function RowActions({ row, onRequestDelete, onSave, onSaved, manufacturer
               })
 
               onSave(dto)
-
-              onSaved?.()
               setOpen(false)
             }}
         />
