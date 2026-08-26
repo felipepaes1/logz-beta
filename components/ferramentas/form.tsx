@@ -1117,7 +1117,7 @@ export function FerramentaForm({
           if (!machinesSaving) setMachinesDialogOpen(open)
         }}
       >
-        <AlertDialogContent className="sm:max-w-lg">
+        <AlertDialogContent className="max-h-[calc(100vh-2rem)] sm:max-w-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Máquinas permitidas</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1125,7 +1125,7 @@ export function FerramentaForm({
               Essa configuração apenas registra a associação.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="max-h-80 overflow-y-auto py-1">
+          <div className="max-h-[min(70vh,32rem)] overflow-y-auto py-1">
             {machines.length ? (
               <div className="grid gap-2 sm:grid-cols-2">
                 {machines.map((machine, index) => {
@@ -1166,7 +1166,7 @@ export function FerramentaForm({
                         />
                       </span>
                       <span className="min-w-0">
-                        <span className="block truncate text-sm font-medium">
+                        <span className="block whitespace-normal break-words text-sm font-medium">
                           {code ? `${code} — ` : ""}{description}
                         </span>
                         {active === false && (
@@ -1189,6 +1189,7 @@ export function FerramentaForm({
               type="button"
               onClick={saveMachineAssociations}
               disabled={machinesSaving || machinesLoading}
+              className="dark: text-white"
             >
               {machinesSaving ? "Salvando..." : "Salvar associações"}
             </Button>
