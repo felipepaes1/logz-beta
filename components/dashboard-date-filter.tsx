@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { CalendarClock } from "lucide-react"
+import { CalendarClock, CalendarDays } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,51 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useDashboardPanorama } from "@/components/dashboard-panorama-provider"
+
+type DateFieldProps = Omit<
+  React.ComponentProps<typeof Input>,
+  "id" | "type" | "className"
+> & {
+  id: string
+  label: string
+}
+
+function DateField({ id, label, ...props }: DateFieldProps) {
+  const inputRef = React.useRef<HTMLInputElement>(null)
+
+  const openPicker = React.useCallback(() => {
+    const input = inputRef.current
+    if (!input) return
+
+    input.focus()
+    input.showPicker?.()
+  }, [])
+
+  return (
+    <div className="grid w-full min-w-0 gap-1.5">
+      <Label htmlFor={id} className="text-xs leading-none">
+        {label}
+      </Label>
+      <div className="relative h-9 w-full">
+        <Input
+          ref={inputRef}
+          id={id}
+          type="date"
+          className="box-border h-9 min-h-9 w-full min-w-0 max-w-full appearance-none px-2.5 pr-9 text-sm [&::-webkit-calendar-picker-indicator]:hidden [&::-webkit-inner-spin-button]:hidden [&::-webkit-clear-button]:hidden [&::-webkit-datetime-edit]:p-0"
+          {...props}
+        />
+        <button
+          type="button"
+          aria-label={`Abrir calendário de ${label}`}
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 absolute top-1/2 right-1.5 flex size-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-sm outline-none focus-visible:ring-[3px]"
+          onClick={openPicker}
+        >
+          <CalendarDays aria-hidden="true" className="size-4" strokeWidth={2} />
+        </button>
+      </div>
+    </div>
+  )
+}
 
 function toMonthKey(value?: string | null) {
   if (!value) return null
@@ -118,11 +163,11 @@ export function DashboardDateFilter() {
       <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <CardTitle className="flex items-center gap-2 text-base">
           <CalendarClock className="h-4 w-4" />
-          Período dos gráficos
+          Período dos Gráficos
         </CardTitle>
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground sm:justify-end">
           <div>
-            Período carregado:{" "}
+            Período Carregado:{" "}
             <span className="font-medium text-foreground">{rangeLabel}</span>
           </div>
           {!hasData && !loading && (
@@ -135,15 +180,13 @@ export function DashboardDateFilter() {
 
       <CardContent className="space-y-4">
         <form
-          className="flex flex-col flex-wrap gap-3 md:flex-row md:items-end"
+          className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-6"
           onSubmit={handleSubmit}
         >
-          <div className="grid gap-1 w-full md:w-[180px]">
-            <Label htmlFor="panorama-date-from" className="text-xs">Início</Label>
-            <Input
+          <div className="grid w-full shrink-0 grid-cols-2 gap-3 sm:w-[320px]">
+            <DateField
               id="panorama-date-from"
-              type="date"
-              className="h-8 px-2 text-xs"
+              label="Início"
               value={from}
               onChange={(e) => {
                 setFrom(e.target.value)
@@ -151,14 +194,10 @@ export function DashboardDateFilter() {
               }}
               max={to || undefined}
             />
-          </div>
 
-          <div className="grid gap-1 w-full md:w-[180px]">
-            <Label htmlFor="panorama-date-to" className="text-xs">Fim</Label>
-            <Input
+            <DateField
               id="panorama-date-to"
-              type="date"
-              className="h-8 px-2 text-xs"
+              label="Fim"
               value={to}
               onChange={(e) => {
                 setTo(e.target.value)
@@ -168,7 +207,7 @@ export function DashboardDateFilter() {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 pt-1 md:pt-0">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               size="sm"
@@ -181,7 +220,7 @@ export function DashboardDateFilter() {
                   : "cursor-pointer disabled:cursor-not-allowed"
               }
             >
-              Últimos 3 meses
+              Últimos 3 Meses
             </Button>
             <Button
               type="button"
@@ -195,7 +234,7 @@ export function DashboardDateFilter() {
                   : "cursor-pointer disabled:cursor-not-allowed"
               }
             >
-              Últimos 6 meses
+              Últimos 6 Meses
             </Button>
             <Button
               type="button"
@@ -209,11 +248,11 @@ export function DashboardDateFilter() {
                   : "cursor-pointer disabled:cursor-not-allowed"
               }
             >
-              Todos os meses
+              Todos os Meses
             </Button>
           </div>
 
-          <div className="flex gap-2 pt-1 md:justify-end md:pt-0">
+          <div className="flex gap-2">
             <Button type="submit" size="sm" className="dark:text-white" disabled={loading}>
               Aplicar
             </Button>

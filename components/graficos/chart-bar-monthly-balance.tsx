@@ -62,7 +62,7 @@ export function ChartBarMonthlyBalance({
   consumo,
   valuesInCents = false,
   currency = "BRL",
-  title = "Acompanhamento mês atual",
+  title = "Acompanhamento Mês Atual",
   description,
   avgCompras = 60000,
   avgConsumo = 55000,
@@ -88,7 +88,7 @@ export function ChartBarMonthlyBalance({
           {title}
         </CardTitle>
         <CardDescription>
-          {description ?? "Média comparativa (Últ. 3 meses)"}
+          {description ?? "Média Comparativa (Últ. 3 Meses)"}
         </CardDescription>
       </CardHeader>
 

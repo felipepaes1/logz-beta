@@ -145,7 +145,7 @@ export function ChartLineMultiple() {
     <Card>
       <CardHeader className="gap-1">
         <div>
-          <CardTitle>Histórico mensal de Consumido e Comprado</CardTitle>
+          <CardTitle>Histórico Mensal de Consumo e Compras</CardTitle>
           <CardDescription>{range}</CardDescription>
         </div>
       </CardHeader>

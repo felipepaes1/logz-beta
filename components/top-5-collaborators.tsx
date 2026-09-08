@@ -20,6 +20,10 @@ import {
 } from "@/components/ui/table"
 import { useDashboardPanorama } from "@/components/dashboard-panorama-provider"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  getCollaboratorDisplayName,
+  getCollaboratorInitials,
+} from "@/lib/collaborator-display"
 
 type Row = { id: string; nome: string; total: number }
 
@@ -28,14 +32,18 @@ export function TopColaboradoresCard() {
 
   const rows = React.useMemo<Row[]>(() => {
     const map = data?.tops_mes_atual.collaborators_top3 ?? []
-    return map.map((r) => ({ id: r.key, nome: r.name ?? r.key, total: r.valor }))
+    return map.map((r, index) => ({
+      id: `${r.key}-${index}`,
+      nome: getCollaboratorDisplayName(r),
+      total: r.valor,
+    }))
   }, [data])
 
   return (
     <Card className="@container/card">
       <CardHeader>
-        <CardTitle className="text-lg">Top 3 colaboradores</CardTitle>
-        <CardDescription>Top do período</CardDescription>
+        <CardTitle className="text-lg">Top 3 Colaboradores</CardTitle>
+        <CardDescription>Top do Período</CardDescription>
       </CardHeader>
 
       <CardContent className="pb-4">
@@ -54,12 +62,7 @@ export function TopColaboradoresCard() {
                 <TableCell>
                   <Avatar className="size-8">
                     <AvatarFallback>
-                      {c.nome
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .slice(0, 2)
-                        .toUpperCase()}
+                      {getCollaboratorInitials(c.nome)}
                     </AvatarFallback>
                   </Avatar>
                 </TableCell>

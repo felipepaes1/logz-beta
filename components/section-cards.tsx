@@ -246,7 +246,7 @@ export function SectionCards() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <IconAlertTriangle className="size-4 text-amber-500" />
-            <CardTitle>Alertas (Estoque baixo)</CardTitle>
+            <CardTitle>Alertas (Estoque Baixo)</CardTitle>
           </div>
           <CardDescription className="flex items-center gap-1.5"></CardDescription>
         </CardHeader>
@@ -255,7 +255,7 @@ export function SectionCards() {
           {/* Cabecalho das colunas */}
           <div className="grid grid-cols-[1fr_auto_auto] items-center mb-2 text-xs font-medium text-muted-foreground">
             <span></span>
-            <span className="text-center">Qtd atual</span>
+            <span className="text-center">Qtd. Atual</span>
           </div>
 
           <ul className="grid gap-2 text-sm">
@@ -278,7 +278,7 @@ export function SectionCards() {
 
         <CardFooter className="justify-end">
           <Button asChild variant="outline" size="sm">
-            <Link href="/ferramentas">Ver todos</Link>
+            <Link href="/ferramentas">Ver Todos</Link>
           </Button>
         </CardFooter>
       </Card>

@@ -77,7 +77,7 @@ export function ChartBarLabelTopTools() {
   return (
     <Card aria-busy={loading}>
       <CardHeader>
-        <CardTitle>Top 5 consumo do periodo (Ferramentas)</CardTitle>
+        <CardTitle>Top 5 Consumo do Período (Ferramentas)</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (

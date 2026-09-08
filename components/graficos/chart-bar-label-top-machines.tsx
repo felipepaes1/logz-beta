@@ -64,7 +64,7 @@ export function ChartBarLabelTopMachines() {
   return (
     <Card aria-busy={loading}>
       <CardHeader>
-        <CardTitle>Top 5 consumo do período (Máquinas)</CardTitle>
+        <CardTitle>Top 5 Consumo do Período (Máquinas)</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
