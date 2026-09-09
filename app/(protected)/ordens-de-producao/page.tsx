@@ -109,6 +109,7 @@ export default function Page() {
           <RowActions
             row={row.original}
             onRequestDelete={requestDelete}
+            existingResources={productionOrders}
             onSave={(_dto: ProductionOrderDto) => {
               reload()
             }}
@@ -116,7 +117,7 @@ export default function Page() {
         ),
       },
     ],
-    [reload, requestDelete]
+    [productionOrders, reload, requestDelete]
   )
 
   const searchableColumns = React.useMemo(
@@ -131,19 +132,20 @@ export default function Page() {
   const form = (
     <OrdemProducaoForm
       title="Nova Ordem de Produção"
-      onSubmit={(dto) =>
-        toast.promise(
-          ProductionOrderResource
-            .inviteOrUpdate(dto.clone().bindToSave()).then(
-            reload
-          ),
-          {
+      existingResources={productionOrders}
+      onSubmit={(dto) => {
+        const promise = ProductionOrderResource
+          .inviteOrUpdate(dto.clone().bindToSave())
+          .then(() => reload())
+
+        toast.promise(promise, {
             loading: "Salvando ordem de produção...",
             success: "Ordem de produção cadastrada!",
             error: "Erro ao salvar ordem de produção.",
-          }
-        )
-      }
+        })
+
+        return promise
+      }}
     />
   )
 

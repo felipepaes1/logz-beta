@@ -10,19 +10,20 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { RequiredMark } from "@/components/ui/required-mark"
 import { ItemResource } from "@/resources/Item/item.resource"
 import { ManufacturerResource } from "@/resources/Manufacturer/manufacturer.resource"
 import { ItemGroupResource } from "@/resources/ItemGroup/item-group.resource"
 import { ProviderResource } from "@/resources/Provider/provider.resource"
 import { PurchaseRequestResource } from "@/resources/PurchaseRequest/purchase-request.resource"
 import { PluralResponse } from "coloquent"
-import { FerramentaForm } from "@/components/ferramentas/form"
+import { FerramentaFormDrawer } from "@/components/ferramentas/form-drawer"
 import { RowActions } from "@/components/ferramentas/row-actions"
 import { ToolThumbnail } from "@/components/ferramentas/tool-thumbnail"
 import { ToolsReportsDownload } from "@/components/ferramentas/reports-download"
-import { Drawer, DrawerTrigger } from "@/components/ui/drawer"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
 import type { Ferramenta, PurchaseRequestInfo } from "@/components/ferramentas/types"
+import type { ItemDto } from "@/resources/Item/item.dto"
 import { toast } from "sonner"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -69,7 +70,7 @@ const buildIncludedMap = (included: any[]) => {
   return map
 }
 
-const resolveIncluded = (value: any, includedMap: Map<string, any>) => {
+const resolveIncluded = (value: any, includedMap: Map<string, any>): any => {
   if (!value) return value
   if (Array.isArray(value)) {
     return value.map((entry) => resolveIncluded(entry, includedMap))
@@ -285,9 +286,9 @@ export default function Page() {
   const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [deleting, setDeleting] = React.useState(false)
   const [deleteRow, setDeleteRow] = React.useState<Ferramenta | null>(null)
-  const [alertAddOpen, setAlertAddOpen] = React.useState(false)
+  const [newToolOpen, setNewToolOpen] = React.useState(false)
+  const [editingTool, setEditingTool] = React.useState<Ferramenta | null>(null)
   const focusRestoreRef = React.useRef<HTMLButtonElement>(null)
-  const alertAddFocusRestoreRef = React.useRef<HTMLButtonElement>(null)
 
   const requestDelete = React.useCallback((row: Ferramenta) => {
     setDeleteRow(row)
@@ -670,7 +671,63 @@ export default function Page() {
     return true
   }, [])
 
-  
+  const requestEditTool = React.useCallback((row: Ferramenta) => {
+    setEditingTool(row)
+  }, [])
+
+  const handleToolSaved = React.useCallback((dto: ItemDto) => {
+    const itemId = Number(dto.id)
+
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.id !== itemId) return r
+
+        // Keep the in-memory resource in sync with the submitted DTO.
+        // The edit form reads drawer/position from this resource when it
+        // is opened again, before any list reload happens.
+        const resource = dto.itemResource ?? r.resource
+        resource?.setAttribute?.("drawer", dto.drawer)
+        resource?.setAttribute?.("position", dto.position)
+        resource?.setAttribute?.("daily_request_limit", dto.daily_request_limit)
+
+        return {
+          ...r,
+          nome: dto.name,
+          codigo: dto.code,
+          grupo: dto.itemGroupResource?.getAttribute("description") || "",
+          fabricante: dto.manufacturerResource?.getAttribute("description") || "",
+          estoqueMinimo: dto.min_quantity,
+          estoqueAtual: dto.quantity,
+          drawer: dto.drawer,
+          position: dto.position,
+          daily_request_limit: dto.daily_request_limit,
+          fornecedor:
+            dto.providerResource?.getAttribute?.("company_name") ??
+            dto.providerResource?.getAttribute?.("name") ??
+            dto.supplier ??
+            "",
+          status: dto.active ? "Ativo" : "Inativo",
+          resource,
+          manufacturer: dto.manufacturerResource,
+          itemGroup: dto.itemGroupResource,
+          provider: dto.providerResource,
+          // Preserve current preOrdered status when editing other fields
+          preOrdered: r.preOrdered,
+          purchaseRequest: r.purchaseRequest,
+        }
+      })
+    )
+
+    // Keep the source collection aligned too. Otherwise the next unrelated
+    // items update could rebuild rows from an older resource.
+    if (dto.itemResource) {
+      setItems((prev) =>
+        prev.map((item) =>
+          Number(item.getApiId?.()) === itemId ? dto.itemResource! : item
+        )
+      )
+    }
+  }, [])
 
   const columns = React.useMemo<ColumnDef<Ferramenta>[]>(
     () => {
@@ -797,66 +854,7 @@ export default function Page() {
           <RowActions
             row={row.original}
             onRequestDelete={requestDelete}
-            onSave={(dto) => {
-              const itemId = Number(dto.id)
-
-              setRows((prev) =>
-                prev.map((r) => {
-                  if (r.id !== itemId) return r
-
-                  // Keep the in-memory resource in sync with the submitted DTO.
-                  // The edit form reads drawer/position from this resource when it
-                  // is opened again, before any list reload happens.
-                  const resource = dto.itemResource ?? r.resource
-                  resource?.setAttribute?.("drawer", dto.drawer)
-                  resource?.setAttribute?.("position", dto.position)
-                  resource?.setAttribute?.("daily_request_limit", dto.daily_request_limit)
-
-                  return {
-                    ...r,
-                    nome: dto.name,
-                    codigo: dto.code,
-                    grupo:
-                      dto.itemGroupResource?.getAttribute("description") ||
-                      "",
-                    fabricante:
-                      dto.manufacturerResource?.getAttribute("description") ||
-                      "",
-                    estoqueMinimo: dto.min_quantity,
-                    estoqueAtual: dto.quantity,
-                    drawer: dto.drawer,
-                    position: dto.position,
-                    daily_request_limit: dto.daily_request_limit,
-                    fornecedor:
-                      dto.providerResource?.getAttribute?.("company_name") ??
-                      dto.providerResource?.getAttribute?.("name") ??
-                      dto.supplier ??
-                      "",
-                    status: dto.active ? "Ativo" : "Inativo",
-                    resource,
-                    manufacturer: dto.manufacturerResource,
-                    itemGroup: dto.itemGroupResource,
-                    provider: dto.providerResource,
-                    // Preserve current preOrdered status when editing other fields
-                    preOrdered: r.preOrdered,
-                    purchaseRequest: r.purchaseRequest,
-                  }
-                })
-              )
-
-              // Keep the source collection aligned too. Otherwise the next
-              // unrelated items update could rebuild rows from an older resource.
-              if (dto.itemResource) {
-                setItems((prev) =>
-                  prev.map((item) =>
-                    Number(item.getApiId?.()) === itemId ? dto.itemResource! : item
-                  )
-                )
-              }
-            }}
-            manufacturers={manufacturers}
-            itemGroups={itemGroups}
-            onGroupsUpdated={setItemGroups}
+            onEdit={requestEditTool}
           />
         ),
       },
@@ -869,6 +867,8 @@ export default function Page() {
     handleDismarkPreOrder,
     openPreOrderModal,
     requestDelete,
+    requestEditTool,
+    handleToolSaved,
   ])
 
   const searchableColumns = React.useMemo(
@@ -891,55 +891,27 @@ export default function Page() {
     [tab]
   )
 
-  const form = React.useMemo(() => (
-    <FerramentaForm
-      title="Nova Ferramenta"
-      manufacturers={manufacturers}
-      itemGroups={itemGroups}
-      onGroupsUpdated={setItemGroups}
-      onSubmit={(dto) => {
-        const p = ItemResource.createOrUpdate(dto.clone().bindToSave())
-        toast.promise(p, {
-          loading: "Salvando ferramenta...",
-          success: "Ferramenta cadastrada!",
-          error: "Erro ao salvar ferramenta.",
-        })
-        return p
-      }}
-    />
-  ), [manufacturers, itemGroups])
+  const handleNewToolSaved = React.useCallback(async () => {
+    await reloadItems()
+  }, [reloadItems])
+
+  const openNewTool = React.useCallback(() => {
+    setNewToolOpen(true)
+  }, [])
 
   const alertHeaderActions = (
     <div className="flex flex-wrap items-center justify-end gap-2">
       <ToolsReportsDownload />
-      <button
-        ref={alertAddFocusRestoreRef}
-        tabIndex={-1}
-        aria-hidden
-        className="sr-only"
-      />
-      <Drawer
-        open={alertAddOpen}
-        onOpenChange={setAlertAddOpen}
-        direction="right"
-      >
-        <DrawerTrigger asChild>
-          <Button size="sm" variant="outline">
-            Nova Ferramenta
-          </Button>
-        </DrawerTrigger>
-        {alertAddOpen
-          ? React.cloneElement(form, {
-              onRequestClose: () => {
-                setAlertAddOpen(false)
-                requestAnimationFrame(() =>
-                  alertAddFocusRestoreRef.current?.focus()
-                )
-              },
-            } as React.ComponentProps<typeof FerramentaForm>)
-          : null}
-      </Drawer>
+      <Button size="sm" variant="outline" onClick={openNewTool}>
+        Nova Ferramenta
+      </Button>
     </div>
+  )
+
+  const allToolsHeaderActions = (
+    <Button size="sm" variant="outline" onClick={openNewTool}>
+      Nova Ferramenta
+    </Button>
   )
 
   return (
@@ -1039,8 +1011,7 @@ export default function Page() {
                 data={todosRows}
                 onDataChange={setRows}
                 columns={columns}
-                addButtonLabel="Nova Ferramenta"
-                renderAddForm={form}
+                headerActions={allToolsHeaderActions}
                 isLoading={isLoading}
                 searchableColumns={searchableColumns}
                 searchPlaceholder="Buscar ferramenta por nome, código, fabricante, fornecedor ou status"
@@ -1048,6 +1019,48 @@ export default function Page() {
             </TabsContent>
 
           </Tabs>
+          <FerramentaFormDrawer
+            open={newToolOpen}
+            onOpenChange={setNewToolOpen}
+            title="Nova Ferramenta"
+            manufacturers={manufacturers}
+            itemGroups={itemGroups}
+            onGroupsUpdated={setItemGroups}
+            onManufacturersUpdated={setManufacturers}
+            onSaved={handleNewToolSaved}
+            onSubmit={(dto) => {
+              const promise = ItemResource.createOrUpdate(dto.clone().bindToSave())
+              toast.promise(promise, {
+                loading: "Salvando ferramenta...",
+                success: "Ferramenta cadastrada!",
+                error: "Erro ao salvar ferramenta.",
+              })
+              return promise
+            }}
+          />
+          <FerramentaFormDrawer
+            open={editingTool !== null}
+            onOpenChange={(open) => {
+              if (!open) setEditingTool(null)
+            }}
+            title="Editar Ferramenta"
+            resource={editingTool?.resource}
+            provider={editingTool?.provider}
+            manufacturers={manufacturers}
+            itemGroups={itemGroups}
+            onGroupsUpdated={setItemGroups}
+            onManufacturersUpdated={setManufacturers}
+            onSaved={handleToolSaved}
+            onSubmit={async (dto) => {
+              const promise = ItemResource.createOrUpdate(dto.clone().bindToSave())
+              await toast.promise(promise, {
+                loading: "Salvando ferramenta...",
+                success: "Ferramenta atualizada!",
+                error: "Erro ao salvar.",
+              })
+              return promise
+            }}
+          />
           <AlertDialog
             open={deleteOpen}
             onOpenChange={(open) => {
@@ -1121,12 +1134,12 @@ export default function Page() {
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="preorder-provider">Fornecedor</Label>
+                  <Label htmlFor="preorder-provider">Fornecedor <RequiredMark /></Label>
                   <Select
                     value={preOrderProviderId || undefined}
                     onValueChange={setPreOrderProviderId}
                   >
-                    <SelectTrigger id="preorder-provider">
+                    <SelectTrigger id="preorder-provider" aria-required="true">
                       <SelectValue placeholder="Selecione um fornecedor" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1144,11 +1157,12 @@ export default function Page() {
                   </Select>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="preorder-qty">Quantidade solicitada</Label>
+                  <Label htmlFor="preorder-qty">Quantidade solicitada <RequiredMark /></Label>
                   <Input
                     id="preorder-qty"
                     type="number"
                     min={1}
+                    aria-required="true"
                     value={preOrderQty}
                     onChange={(e) => setPreOrderQty(e.target.value)}
                   />

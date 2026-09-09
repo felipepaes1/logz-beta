@@ -19,31 +19,22 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { Drawer } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { RequiredMark } from "@/components/ui/required-mark"
 import { IconCheck, IconDotsVertical, IconInfoCircle } from "@tabler/icons-react"
-import { ItemResource } from "@/resources/Item/item.resource"
-import type { ItemDto } from "@/resources/Item/item.dto"
-import { ManufacturerResource } from "@/resources/Manufacturer/manufacturer.resource"
-import { ItemGroupResource } from "@/resources/ItemGroup/item-group.resource"
 import { PurchaseRequestResource } from "@/resources/PurchaseRequest/purchase-request.resource"
 import type { Ferramenta } from "./types"
-import { FerramentaForm } from "./form"
 import { toast } from "sonner"
 
 interface RowActionsProps {
   row: Ferramenta
   onRequestDelete: (row: Ferramenta) => void
-  onSave: (dto: ItemDto) => void
+  onEdit: (row: Ferramenta) => void
   onSaved?: () => void | Promise<void>
-  manufacturers: ManufacturerResource[]
-  itemGroups: ItemGroupResource[]
-  onGroupsUpdated?: (groups: ItemGroupResource[]) => void
 }
 
-export function RowActions({ row, onRequestDelete, onSave, onSaved, manufacturers, itemGroups, onGroupsUpdated }: RowActionsProps) {
-  const [open, setOpen] = React.useState(false)
+export function RowActions({ row, onRequestDelete, onEdit, onSaved }: RowActionsProps) {
   const [menuOpen, setMenuOpen] = React.useState(false)
   const [orderInfoOpen, setOrderInfoOpen] = React.useState(false)
   const [generateEntryOpen, setGenerateEntryOpen] = React.useState(false)
@@ -189,7 +180,7 @@ export function RowActions({ row, onRequestDelete, onSave, onSaved, manufacturer
           <DropdownMenuContent align="end" className="w-32">
             <DropdownMenuItem
               onClick={() => {
-                setTimeout(() => setOpen(true), 0)
+                setTimeout(() => onEdit(row), 0)
               }}
             >
               Editar
@@ -207,30 +198,6 @@ export function RowActions({ row, onRequestDelete, onSave, onSaved, manufacturer
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <Drawer open={open} onOpenChange={setOpen} direction="right">
-        {open ? (
-          <FerramentaForm
-            title="Editar Ferramenta"
-            resource={row.resource}
-            provider={row.provider}
-            manufacturers={manufacturers}
-            itemGroups={itemGroups}
-            onGroupsUpdated={onGroupsUpdated}
-            onRequestClose={() => setOpen(false)}    
-            onSubmit={async (dto) => {
-              const promise = ItemResource.createOrUpdate(dto.clone().bindToSave())
-              await toast.promise(promise, {
-                loading: "Salvando ferramenta...",
-                success: "Ferramenta atualizada!",
-                error: "Erro ao salvar.",
-              })
-
-              onSave(dto)
-              setOpen(false)
-            }}
-        />
-        ) : null}
-      </Drawer>
       <AlertDialog open={orderInfoOpen} onOpenChange={setOrderInfoOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -297,23 +264,25 @@ export function RowActions({ row, onRequestDelete, onSave, onSaved, manufacturer
               <div className="rounded-md border px-3 py-2">{row.nome}</div>
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor={`unit-price-${row.id}`}>Preço unitário</Label>
+              <Label htmlFor={`unit-price-${row.id}`}>Preço unitário <RequiredMark /></Label>
               <Input
                 id={`unit-price-${row.id}`}
                 type="text"
                 inputMode="decimal"
                 value={unitPrice}
+                aria-required="true"
                 onChange={(event) => handleUnitPriceChange(event.target.value)}
                 disabled={generatingEntry}
                 placeholder="Ex.: 123,45"
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor={`quantity-${row.id}`}>Quantidade recebida</Label>
+              <Label htmlFor={`quantity-${row.id}`}>Quantidade recebida <RequiredMark /></Label>
               <Input
                 id={`quantity-${row.id}`}
                 type="number"
                 min={1}
+                aria-required="true"
                 step="1"
                 value={quantity}
                 onChange={(event) => setQuantity(event.target.value)}

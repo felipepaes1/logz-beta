@@ -10,6 +10,10 @@ import { ColaboradorForm } from "@/components/colaboradores/form"
 import { RowActions } from "@/components/colaboradores/row-actions"
 import { toast } from "sonner"
 import type { Colaborador } from "@/components/colaboradores/types"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+
+const COLABORADOR_NOME_PREVIEW_LENGTH = 36
+const COLABORADOR_CODIGO_PREVIEW_LENGTH = 20
 
 export default function Page() {
   const [isLoading, setIsLoading] = React.useState(true)
@@ -47,11 +51,70 @@ export default function Page() {
 
   const columns = React.useMemo<ColumnDef<Colaborador>[]>(
     () => [
-      { accessorKey: "nome", header: "Nome" },
-      { accessorKey: "codigo", header: "Código" },
+      {
+        accessorKey: "nome",
+        header: "Nome",
+        meta: {
+          className: "min-w-0",
+        },
+        cell: ({ row }) => {
+          const nome = String(row.original.nome ?? "")
+          const nomePreview = (
+            <span
+              className="block min-w-0 max-w-full truncate"
+              tabIndex={nome.length > COLABORADOR_NOME_PREVIEW_LENGTH ? 0 : undefined}
+            >
+              {nome}
+            </span>
+          )
+
+          if (nome.length <= COLABORADOR_NOME_PREVIEW_LENGTH) return nomePreview
+
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {nomePreview}
+              </TooltipTrigger>
+              <TooltipContent side="top" align="start" className="max-w-[min(90vw,420px)]">
+                {nome}
+              </TooltipContent>
+            </Tooltip>
+          )
+        },
+      },
+      {
+        accessorKey: "codigo",
+        header: "Código",
+        meta: { className: "w-[160px]" },
+        cell: ({ row }) => {
+          const codigo = String(row.original.codigo ?? "")
+          const codigoPreview = (
+            <span
+              className="block min-w-0 max-w-full truncate"
+              tabIndex={codigo.length > COLABORADOR_CODIGO_PREVIEW_LENGTH ? 0 : undefined}
+            >
+              {codigo}
+            </span>
+          )
+
+          if (codigo.length <= COLABORADOR_CODIGO_PREVIEW_LENGTH) return codigoPreview
+
+          return (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                {codigoPreview}
+              </TooltipTrigger>
+              <TooltipContent side="top" align="start" className="max-w-[min(90vw,420px)]">
+                {codigo}
+              </TooltipContent>
+            </Tooltip>
+          )
+        },
+      },
       {
         accessorKey: "status",
         header: "Status",
+        meta: { className: "w-[120px]" },
         cell: ({ row }) => (
           <Badge
             className={cn(
@@ -67,6 +130,7 @@ export default function Page() {
       },
       {
         id: "actions",
+        meta: { className: "w-12 p-0" },
         cell: ({ row }) => (
           <RowActions
             row={row.original}
@@ -118,6 +182,7 @@ export default function Page() {
             addButtonLabel="Novo Colaborador"
             renderAddForm={form}
             isLoading={isLoading}
+            tableClassName="table-fixed"
             searchableColumns={searchableColumns}
             searchPlaceholder="Buscar colaborador por nome, código ou status"
           />

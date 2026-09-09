@@ -187,6 +187,7 @@ export function DataTable<T extends { id: number }>({
   searchableColumns,
   searchPlaceholder,
   emptyMessage = "Nenhum registro encontrado.",
+  tableClassName,
 }: {
   data: T[]
   columns: ColumnDef<T>[]
@@ -199,6 +200,7 @@ export function DataTable<T extends { id: number }>({
   searchableColumns?: SearchableColumnConfig<T>[]
   searchPlaceholder?: string
   emptyMessage?: string
+  tableClassName?: string
 }) {
 
   const sortableId = React.useId()
@@ -237,19 +239,26 @@ export function DataTable<T extends { id: number }>({
   const normalizedSearchColumns = React.useMemo<NormalizedSearchColumn<T>[]>(() => {
     if (!searchableColumns?.length) return []
     const seen = new Set<string>()
-    return searchableColumns
-      .map((column) => {
-        const columnId = String(column.id)
-        if (!columnId.trim()) return null
-        if (seen.has(columnId)) return null
-        seen.add(columnId)
-        return {
-          id: columnId,
-          label: column.label ?? columnId,
-          getValue: column.getValue,
-        }
-      })
-      .filter((column): column is NormalizedSearchColumn<T> => !!column)
+    return searchableColumns.reduce<NormalizedSearchColumn<T>[]>((columns, column) => {
+      const columnId = String(column.id)
+      if (!columnId.trim() || seen.has(columnId)) return columns
+
+      seen.add(columnId)
+      columns.push(
+        column.getValue
+          ? {
+              id: columnId,
+              label: column.label ?? columnId,
+              getValue: column.getValue,
+            }
+          : {
+              id: columnId,
+              label: column.label ?? columnId,
+            }
+      )
+
+      return columns
+    }, [])
   }, [searchableColumns])
 
   const hasSearch = normalizedSearchColumns.length > 0
@@ -434,7 +443,7 @@ export function DataTable<T extends { id: number }>({
             autoScroll={false}
             id={sortableId}
           >
-            <Table>
+            <Table className={tableClassName}>
               <TableHeader className="bg-muted sticky top-0 z-10">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <TableRow key={headerGroup.id}>
@@ -450,7 +459,7 @@ export function DataTable<T extends { id: number }>({
                   </TableRow>
                 ))}
               </TableHeader>
-              <TableBody className="data-[slot=table-body]:[&>*]:data-[slot=table-cell]:first:w-8">
+              <TableBody>
                 {isLoading ? (
                   Array.from({ length: 10 }).map((_, i) => (
                     <TableRow key={`sk-${i}`}>

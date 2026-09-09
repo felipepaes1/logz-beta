@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Textarea } from "@/components/ui/textarea"
+import { RequiredMark } from "@/components/ui/required-mark"
 import { EntradaForm } from "@/components/entrada-saida/form-entrada"
 import { SaidaForm } from "@/components/entrada-saida/form-saida"
 import { RowActions } from "@/components/entrada-saida/row-actions"
@@ -296,11 +297,11 @@ const allColumns: Record<string, ColumnDef<Movimento>> = {
         new Date(row.original.data)
       ),
   },
-  grupo: { accessorKey: "grupo", header: "Macrogrupo", meta: { className: "max-w-[220px]", truncate: true } },
-  codigo: { accessorKey: "codigo", header: "Código" },
+  grupo: { accessorKey: "grupo", header: "Macrogrupo", meta: { className: "max-w-[180px]", truncate: true } },
+  codigo: { accessorKey: "codigo", header: "Código", meta: { className: "max-w-[160px]", truncate: true } },
   item: { accessorKey: "item", header: "Item", meta: { className: "max-w-[260px]", truncate: true } },
-  maquina: { accessorKey: "maquina", header: "Máquina", meta: { className: "max-w-[180px]", truncate: true } },
-  responsavel: { accessorKey: "responsavel", header: "Responsável", meta: { className: "max-w-[180px]", truncate: true } },
+  maquina: { accessorKey: "maquina", header: "Máquina", meta: { className: "max-w-[200px]", truncate: true } },
+  responsavel: { accessorKey: "responsavel", header: "Responsável", meta: { className: "max-w-[200px]", truncate: true } },
   operacao: { accessorKey: "operacao", header: "Operação" },
   precoUnitario: {
     accessorKey: "precoUnitario",
@@ -322,7 +323,7 @@ const allColumns: Record<string, ColumnDef<Movimento>> = {
           )
         : "",
   },
-  ordem: { accessorKey: "ordem", header: "Ordem" },
+  ordem: { accessorKey: "ordem", header: "Ordem", meta: { className: "max-w-[180px]", truncate: true } },
   quantidade: { accessorKey: "quantidade", header: "Quantidade" },
 }
 
@@ -638,10 +639,14 @@ export default function Page() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="@container/main flex flex-1 flex-col gap-2">
+      <div className="@container/main flex min-w-0 flex-1 flex-col gap-2">
         <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
           <button ref={focusRestoreRef} tabIndex={-1} aria-hidden className="sr-only" />
-          <Tabs value={tab} onValueChange={(value) => setTab(value as typeof tab)}>
+          <Tabs
+            value={tab}
+            onValueChange={(value) => setTab(value as typeof tab)}
+            className="w-full min-w-0"
+          >
             <TabsList className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-3 bg-transparent p-0 sm:grid-cols-3">
               <TabsTrigger
                 value="todos"
@@ -669,7 +674,7 @@ export default function Page() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="todos" className="mt-8">
+            <TabsContent value="todos" className="mt-8 min-w-0">
               <DataTable
                 key="todos"
                 data={todosRows}
@@ -682,7 +687,7 @@ export default function Page() {
               />
             </TabsContent>
 
-            <TabsContent value="entradas" className="mt-8">
+            <TabsContent value="entradas" className="mt-8 min-w-0">
               <DataTable
                 key="entradas"
                 data={entradasRows}
@@ -695,7 +700,7 @@ export default function Page() {
               />
             </TabsContent>
 
-            <TabsContent value="saidas" className="mt-8">
+            <TabsContent value="saidas" className="mt-8 min-w-0">
               <DataTable
                 key="saidas"
                 data={saidasRows}
@@ -731,11 +736,17 @@ export default function Page() {
               </AlertDialogHeader>
               <div className="grid gap-2">
                 <label htmlFor="justification" className="text-sm font-medium">
-                  Justificativa <span className="text-muted-foreground">(mínimo {JUST_MIN} caracteres)</span>
+                  Justificativa <RequiredMark />{" "}
+                  <span className="text-muted-foreground">(mínimo {JUST_MIN} caracteres)</span>
                 </label>
                 <Textarea
                   id="justification"
                   value={justification}
+                  maxLength={500}
+                  aria-required="true"
+                  aria-invalid={
+                    justification.trim().length > 0 && justification.trim().length < JUST_MIN
+                  }
                   onChange={(event) => setJustification(event.target.value)}
                   placeholder="Ex.: Lançamento duplicado; corrigido pelo movimento..."
                   rows={4}

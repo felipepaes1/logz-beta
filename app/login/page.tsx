@@ -3,6 +3,8 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { RequiredMark } from "@/components/ui/required-mark"
 import { Button } from "@/components/ui/button"
 import Image from "next/image"
 import logoDark from "@/assets/logo-logz-dark.svg"
@@ -140,19 +142,27 @@ export default function LoginPage() {
           onSubmit={handleSubmit}
           className="flex w-full max-w-sm flex-col gap-4 text-white"
         >
-          <Input
-            placeholder="Login"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-          <Input
-            type="password"
-            placeholder="Senha"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="login">Login <RequiredMark /></Label>
+            <Input
+              id="login"
+              placeholder="Login"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="password">Senha <RequiredMark /></Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
           <small className="text-right text-xs opacity-70">
             Esqueceu sua senha?{" "}

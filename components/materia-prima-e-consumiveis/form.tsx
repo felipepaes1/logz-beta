@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { RequiredMark } from "@/components/ui/required-mark"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
@@ -158,12 +159,13 @@ export function MateriaPrimaConsumivelForm({
       <div className="flex-1 overflow-y-auto pr-1">
         <form className="grid gap-4 pb-6" onSubmit={handleSubmit}>
           <div className="grid gap-1">
-            <Label htmlFor="name">Nome</Label>
+            <Label htmlFor="name">Nome <RequiredMark /></Label>
             <Input
               id="name"
               name="name"
               defaultValue={resource?.name ?? ""}
               className={cn(errors.name && "border-destructive")}
+              aria-required="true"
             />
             {errors.name ? (
               <span className="text-xs text-destructive">{errors.name}</span>
@@ -171,12 +173,13 @@ export function MateriaPrimaConsumivelForm({
           </div>
 
           <div className="grid gap-1">
-            <Label htmlFor="code">Código</Label>
+            <Label htmlFor="code">Código <RequiredMark /></Label>
             <Input
               id="code"
               name="code"
               defaultValue={resource?.code ?? ""}
               className={cn(errors.code && "border-destructive")}
+              aria-required="true"
             />
             {errors.code ? (
               <span className="text-xs text-destructive">{errors.code}</span>
@@ -184,9 +187,14 @@ export function MateriaPrimaConsumivelForm({
           </div>
 
           <div className="grid gap-1">
-            <Label>Categoria</Label>
+            <Label htmlFor="category">Categoria <RequiredMark /></Label>
             <Select value={category || undefined} onValueChange={setCategory}>
-              <SelectTrigger className={cn(errors.category && "border-destructive")}>
+              <SelectTrigger
+                id="category"
+                className={cn(errors.category && "border-destructive")}
+                aria-required="true"
+                aria-invalid={Boolean(errors.category)}
+              >
                 <SelectValue placeholder="Selecione a categoria" />
               </SelectTrigger>
               <SelectContent>
@@ -203,12 +211,17 @@ export function MateriaPrimaConsumivelForm({
           </div>
 
           <div className="grid gap-1">
-            <Label>Tipo de unidade</Label>
+            <Label htmlFor="unitType">Tipo de unidade <RequiredMark /></Label>
             <Select
               value={unitType || undefined}
               onValueChange={(value) => setUnitType(normalizeInventoryUnitType(value) ?? "")}
             >
-              <SelectTrigger className={cn(errors.unitType && "border-destructive")}>
+              <SelectTrigger
+                id="unitType"
+                className={cn(errors.unitType && "border-destructive")}
+                aria-required="true"
+                aria-invalid={Boolean(errors.unitType)}
+              >
                 <SelectValue placeholder="Selecione o tipo de unidade" />
               </SelectTrigger>
               <SelectContent>

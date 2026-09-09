@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RequiredMark } from "@/components/ui/required-mark";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { UserDto } from "@/resources/User/user.dto";
@@ -248,24 +249,26 @@ export default function Page() {
         <CardContent>
           <form onSubmit={onSubmitPerfil} className="grid gap-4 max-w-xl">
           <div className="grid gap-2">
-            <Label htmlFor="name">Nome e Sobrenome</Label>
+            <Label htmlFor="name">Nome e Sobrenome <RequiredMark /></Label>
             <Input
               id="name"
               value={perfil.name}
               onChange={(e) => setPerfil((s) => ({ ...s, name: e.target.value }))}
               aria-invalid={!!perfilErrors.name}
+              aria-required="true"
               disabled={loadingUser}
             />
             {perfilErrors.name && <p className="text-sm text-destructive">{perfilErrors.name}</p>}
           </div>
             <div className="grid gap-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email">E-mail <RequiredMark /></Label>
               <Input
                 id="email"
                 type="email"
                 value={perfil.email}
                 onChange={(e) => setPerfil((s) => ({ ...s, email: e.target.value }))}
                 aria-invalid={!!perfilErrors.email}
+                aria-required="true"
                 disabled={loadingUser}
               />
               {perfilErrors.email && <p className="text-sm text-destructive">{perfilErrors.email}</p>}
@@ -289,35 +292,38 @@ export default function Page() {
         <CardContent>
           <form onSubmit={onSubmitSenha} className="grid gap-4 max-w-xl">
             <div className="grid gap-2">
-              <Label htmlFor="current_password">Senha atual</Label>
+              <Label htmlFor="current_password">Senha atual <RequiredMark /></Label>
               <Input
                 id="current_password"
                 type="password"
                 value={senha.current_password}
                 onChange={(e) => setSenha((s) => ({ ...s, current_password: e.target.value }))}
                 aria-invalid={!!senhaErrors.current_password}
+                aria-required="true"
               />
               {senhaErrors.current_password && <p className="text-sm text-destructive">{senhaErrors.current_password}</p>}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Nova senha</Label>
+              <Label htmlFor="password">Nova senha <RequiredMark /></Label>
               <Input
                 id="password"
                 type="password"
                 value={senha.password}
                 onChange={(e) => setSenha((s) => ({ ...s, password: e.target.value }))}
                 aria-invalid={!!senhaErrors.password}
+                aria-required="true"
               />
               {senhaErrors.password && <p className="text-sm text-destructive">{senhaErrors.password}</p>}
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password_confirmation">Confirmar nova senha</Label>
+              <Label htmlFor="password_confirmation">Confirmar nova senha <RequiredMark /></Label>
               <Input
                 id="password_confirmation"
                 type="password"
                 value={senha.password_confirmation}
                 onChange={(e) => setSenha((s) => ({ ...s, password_confirmation: e.target.value }))}
                 aria-invalid={!!senhaErrors.password_confirmation}
+                aria-required="true"
               />
               {senhaErrors.password_confirmation && (
                 <p className="text-sm text-destructive">{senhaErrors.password_confirmation}</p>

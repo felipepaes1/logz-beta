@@ -2,11 +2,12 @@ import { BaseDTO } from "../../base/Base.dto";
 import { ProductionOrderResource } from "./production-orders.resource";
 
 export class ProductionOrderDto extends BaseDTO {
-    public description: string;
-    public code: string;
-    public active: number;
+    public id?: string | number;
+    public description!: string;
+    public code!: string;
+    public active!: number;
 
-    public productionOrderResource: ProductionOrderResource;
+    public productionOrderResource!: ProductionOrderResource;
 
     public createFromColoquentResource(resource: ProductionOrderResource): ProductionOrderDto {
 

@@ -76,18 +76,20 @@ export default function Page() {
                         ...r,
                         descricao: dto.description,
                         codigo: dto.code,
+                        modelo: dto.model ?? "",
                         status: dto.active ? "Ativo" : "Inativo",
+                        resource: dto.machineResource ?? r.resource,
                       }
                     : r
                 )
               )
-              if (typeof window !== "undefined") window.location.reload()
             }}
+            existingResources={machines}
           />
         ),
       },
     ],
-    [setRows]
+    [machines]
   )
 
   const searchableColumns = React.useMemo(
@@ -103,6 +105,7 @@ export default function Page() {
   const form = (
   <CentroCustoForm
     title="Novo Centro de Custo"
+    existingResources={machines}
     onSubmit={(dto) => {
       const promise = MachineResource
         .inviteOrUpdate(dto.clone().bindToSave())

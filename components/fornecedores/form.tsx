@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { RequiredMark } from "@/components/ui/required-mark"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import type { Fornecedor } from "./types"
@@ -119,12 +120,13 @@ export function FornecedorForm({ onSubmit, initialValues, resource, title, onReq
           }}
         >
           <div className="flex flex-col gap-3">
-            <Label htmlFor="empresa">Empresa</Label>
+            <Label htmlFor="empresa">Empresa <RequiredMark /></Label>
              <Input
               id="empresa"
               name="empresa"
               defaultValue={initialValues?.empresa}
               className={cn(errors.empresa && "border-destructive")}
+              aria-required="true"
               aria-invalid={!!errors.empresa}
               aria-describedby={errors.empresa ? "empresa-erro" : undefined}
             />
@@ -135,12 +137,13 @@ export function FornecedorForm({ onSubmit, initialValues, resource, title, onReq
             )}
           </div>
           <div className="flex flex-col gap-3">
-            <Label htmlFor="vendedor">Vendedor</Label>
+            <Label htmlFor="vendedor">Vendedor <RequiredMark /></Label>
             <Input
               id="vendedor"
               name="vendedor"
               defaultValue={initialValues?.vendedor}
               className={cn(errors.vendedor && "border-destructive")}
+              aria-required="true"
               aria-invalid={!!errors.vendedor}
               aria-describedby={errors.vendedor ? "vendedor-erro" : undefined}
             />
@@ -153,7 +156,13 @@ export function FornecedorForm({ onSubmit, initialValues, resource, title, onReq
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-3">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" defaultValue={initialValues?.email} />
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="Ex.: contato@empresa.com"
+                defaultValue={initialValues?.email}
+              />
             </div>
             <div className="flex flex-col gap-3">
               <Label htmlFor="telefone">Telefone</Label>
@@ -163,6 +172,7 @@ export function FornecedorForm({ onSubmit, initialValues, resource, title, onReq
                 value={phone}
                 onChange={(e) => setPhone(formatPhone(e.target.value))}
                 type="tel"
+                placeholder="Ex.: (11) 99999-9999"
               />
             </div>
           </div>

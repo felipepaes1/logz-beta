@@ -5,6 +5,7 @@ import {
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
+  DrawerDescription,
   DrawerFooter,
   DrawerClose,
 } from "@/components/ui/drawer"
@@ -12,27 +13,41 @@ import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { RequiredMark } from "@/components/ui/required-mark"
 import { ProductionOrderResource } from "@/resources/ProductionOrders/production-orders.resource"
 import { ProductionOrderDto } from "@/resources/ProductionOrders/production-orders.dto"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 
 interface Props {
   onSubmit: (dto: ProductionOrderDto) => Promise<unknown> | void
   resource?: ProductionOrderResource
+  existingResources?: ProductionOrderResource[]
   title: string
   onRequestClose?: () => void
 }
 
-export function OrdemProducaoForm({ onSubmit, resource, title, onRequestClose }: Props) {
+const normalizeComparableValue = (value: unknown) =>
+  String(value ?? "").trim().toLocaleLowerCase()
+
+export function OrdemProducaoForm({
+  onSubmit,
+  resource,
+  existingResources = [],
+  title,
+  onRequestClose,
+}: Props) {
   const isEditing = !!resource
   const [active, setActive] = React.useState(() => {
     if (!resource) return true
     return Number(resource?.getAttribute("active")) === 1
   })
   const [submitting, setSubmitting] = React.useState(false)
-  const [errors, setErrors] = React.useState<{ descricao?: string; codigo?: string }>(
-    {}
-  )
+  const [errors, setErrors] = React.useState<{
+    descricao?: string
+    codigo?: string
+    duplicado?: string
+  }>({})
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -42,7 +57,7 @@ export function OrdemProducaoForm({ onSubmit, resource, title, onRequestClose }:
     const descricao = String(data.get("descricao") || "").trim()
     const codigo = String(data.get("codigo") || "").trim()
 
-    const newErrors: { descricao?: string; codigo?: string } = {}
+    const newErrors: typeof errors = {}
     if (!descricao) newErrors.descricao = "Campo obrigatório"
     if (!codigo) newErrors.codigo = "Campo obrigatório"
 
@@ -50,6 +65,35 @@ export function OrdemProducaoForm({ onSubmit, resource, title, onRequestClose }:
       setErrors(newErrors)
       return
     }
+
+    const currentId = resource?.getApiId?.()
+    const duplicate = existingResources.some((existing) => {
+      const existingId = existing.getApiId?.()
+      if (
+        resource &&
+        currentId !== undefined &&
+        currentId !== null &&
+        String(existingId ?? "") === String(currentId)
+      ) {
+        return false
+      }
+
+      return (
+        normalizeComparableValue(existing.getAttribute("description")) ===
+          normalizeComparableValue(descricao) &&
+        normalizeComparableValue(existing.getAttribute("code")) ===
+          normalizeComparableValue(codigo)
+      )
+    })
+
+    if (duplicate) {
+      const message =
+        "Já existe uma ordem de producao cadastrada com esta descricao e codigo."
+      setErrors({ duplicado: message })
+      toast.error(message)
+      return
+    }
+
     setErrors({})
 
     const dto = new ProductionOrderDto()
@@ -84,16 +128,20 @@ export function OrdemProducaoForm({ onSubmit, resource, title, onRequestClose }:
     >
       <DrawerHeader>
         <DrawerTitle>{title}</DrawerTitle>
+        <DrawerDescription className="sr-only">
+          Preencha os dados da ordem de producao e salve para continuar.
+        </DrawerDescription>
       </DrawerHeader>
       <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           <div className="flex flex-col gap-1">
-            <Label htmlFor="descricao">Descrição</Label>
+            <Label htmlFor="descricao">Descrição <RequiredMark /></Label>
             <Input
               id="descricao"
               name="descricao"
               defaultValue={resource?.getAttribute("description")}
               className={cn(errors.descricao && "border-destructive")}
+              aria-required="true"
             />
             {errors.descricao && (
               <span className="text-destructive text-xs">{errors.descricao}</span>
@@ -101,17 +149,21 @@ export function OrdemProducaoForm({ onSubmit, resource, title, onRequestClose }:
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label htmlFor="codigo">Código</Label>
+            <Label htmlFor="codigo">Código <RequiredMark /></Label>
             <Input
               id="codigo"
               name="codigo"
               defaultValue={resource?.getAttribute("code")}
               className={cn(errors.codigo && "border-destructive")}
+              aria-required="true"
             />
             {errors.codigo && (
               <span className="text-destructive text-xs">{errors.codigo}</span>
             )}
           </div>
+          {errors.duplicado && (
+            <span className="text-destructive text-xs">{errors.duplicado}</span>
+          )}
 
           <div className="flex items-center gap-3">
             <Label htmlFor="status">Status</Label>

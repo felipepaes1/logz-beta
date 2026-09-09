@@ -29,7 +29,7 @@ export function RowActions({ row, onSave }: RowActionsProps) {
         <DropdownMenuTrigger asChild>
           <Button
             variant="ghost"
-            className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+            className="data-[state=open]:bg-muted text-muted-foreground ml-auto flex size-8"
             size="icon"
           >
             <IconDotsVertical />

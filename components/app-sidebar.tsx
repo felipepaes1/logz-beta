@@ -33,7 +33,7 @@ import { useAuthUser } from "@/hooks/use-auth-user"
 export const sidebarData = {
   navMain: [
     {
-      title: "Panorama geral",
+      title: "Panorama Geral",
       url: "/dashboard",
       icon: IconTimeline,
     },

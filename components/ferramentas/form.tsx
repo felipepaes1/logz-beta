@@ -5,13 +5,14 @@ import {
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
+  DrawerDescription,
   DrawerFooter,
-  DrawerClose,
 } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import { RequiredMark } from "@/components/ui/required-mark"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -31,7 +32,6 @@ import { ItemDto } from "@/resources/Item/item.dto"
 import { cn } from "@/lib/utils"
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -107,7 +107,31 @@ const extractAttachmentToken = (payload: any) =>
   null
 
 const unwrapApiPayload = (response: any) =>
-  response?.axiosResponse?.data ?? response?.data ?? response
+  response?.getData?.() ?? response?.axiosResponse?.data ?? response?.data ?? response
+
+const extractApiId = (response: any) => {
+  const payload = unwrapApiPayload(response)
+  return (
+    payload?.data?.id ??
+    payload?.id ??
+    payload?.data?.data?.id ??
+    payload?.data?.data?.attributes?.id ??
+    payload?.data?.attributes?.id ??
+    null
+  )
+}
+
+const buildItemGroupDto = (
+  resource: ItemGroupResource | null | undefined,
+  description: string
+) => {
+  const dto = new ItemGroupDto()
+  const rawId = resource?.getApiId?.() ?? resource?.getAttribute?.("id") ?? null
+  const numericId = rawId === null || rawId === undefined ? null : Number(rawId)
+  dto.id = Number.isFinite(numericId) ? numericId : null
+  dto.description = description
+  return dto.bindToSave()
+}
 
 const extractMachineIds = (response: any): string[] => {
   const payload = unwrapApiPayload(response)
@@ -126,24 +150,30 @@ const extractMachineIds = (response: any): string[] => {
 
 interface FerramentaFormProps {
   onSubmit: (dto: ItemDto) => Promise<unknown>
+  onSaved?: (dto: ItemDto) => void | Promise<void>
   resource?: ItemResource
   manufacturers: ManufacturerResource[]
   itemGroups: ItemGroupResource[]
   title: string
   onRequestClose?: () => void
+  onNestedOverlayChange?: (open: boolean) => void
   provider?: ProviderResource | null
   onGroupsUpdated?: (groups: ItemGroupResource[]) => void
+  onManufacturersUpdated?: (manufacturers: ManufacturerResource[]) => void
 }
 
 export function FerramentaForm({
   onSubmit,
+  onSaved,
   resource,
   manufacturers,
   itemGroups,
   title,
   onRequestClose,
+  onNestedOverlayChange,
   provider: initialProvider,
-  onGroupsUpdated
+  onGroupsUpdated,
+  onManufacturersUpdated
 }: FerramentaFormProps) {
   const [active, setActive] = React.useState(
     resource?.getAttribute("active") ?? true
@@ -156,7 +186,11 @@ export function FerramentaForm({
   )
   const [submitting, setSubmitting] = React.useState(false)
   const [groups, setGroups] = React.useState<ItemGroupResource[]>(itemGroups)
-  React.useEffect(() => setGroups(itemGroups), [itemGroups])
+  const groupsRef = React.useRef<ItemGroupResource[]>(itemGroups)
+  React.useEffect(() => {
+    groupsRef.current = itemGroups
+    setGroups(itemGroups)
+  }, [itemGroups])
   const wantSelectGroupIdRef = React.useRef<string | null>(null)
   const [newGroupOpen, setNewGroupOpen] = React.useState(false)
   const [newGroupName, setNewGroupName] = React.useState("")
@@ -165,12 +199,21 @@ export function FerramentaForm({
   const [editGroupName, setEditGroupName] = React.useState("")
   const [editingGroup, setEditingGroup] = React.useState<ItemGroupResource | null>(null)
   const [updatingGroup, setUpdatingGroup] = React.useState(false)
-  const editGroupTargetRef = React.useRef<ItemGroupResource | null>(null)
+  const groupSelectTriggerRef = React.useRef<HTMLButtonElement>(null)
+  const focusGroupSelect = React.useCallback((event: Event) => {
+    event.preventDefault()
+    requestAnimationFrame(() => groupSelectTriggerRef.current?.focus())
+  }, [])
   const [groupSelectOpen, setGroupSelectOpen] = React.useState(false)
+  const [manufacturerSelectOpen, setManufacturerSelectOpen] = React.useState(false)
   const loadingGroupsRef = React.useRef(false)
   const mountedRef = React.useRef(true)
   const [mans, setMans] = React.useState<ManufacturerResource[]>(manufacturers)
-  React.useEffect(() => setMans(manufacturers), [manufacturers])
+  const manufacturersRef = React.useRef<ManufacturerResource[]>(manufacturers)
+  React.useEffect(() => {
+    manufacturersRef.current = manufacturers
+    setMans(manufacturers)
+  }, [manufacturers])
   const wantSelectManufacturerIdRef = React.useRef<string | null>(null)
   const [newManufacturerOpen, setNewManufacturerOpen] = React.useState(false)
   const [newManufacturerName, setNewManufacturerName] = React.useState("")
@@ -186,6 +229,7 @@ export function FerramentaForm({
     resource?.getAttribute?.("provider_id")?.toString?.() ??
     ""
   )
+  const [providerSelectOpen, setProviderSelectOpen] = React.useState(false)
   const fileInputRef = React.useRef<HTMLInputElement>(null)
   const objectUrlRef = React.useRef<string | null>(null)
   const [avatarDialogOpen, setAvatarDialogOpen] = React.useState(false)
@@ -193,6 +237,48 @@ export function FerramentaForm({
   const [avatarPreviewUrl, setAvatarPreviewUrl] = React.useState<string | null>(null)
   const [avatarRemoved, setAvatarRemoved] = React.useState(false)
   const [isDragOver, setIsDragOver] = React.useState(false)
+  const nestedOverlayRef = React.useRef<Set<string>>(new Set())
+  const closeOverlayFramesRef = React.useRef<Map<string, number>>(new Map())
+  const hasNestedOverlayOpen = React.useCallback(
+    () => nestedOverlayRef.current.size > 0,
+    []
+  )
+  const setNestedOverlayOpen = React.useCallback(
+    (key: string, open: boolean) => {
+      const existingFrame = closeOverlayFramesRef.current.get(key)
+      if (existingFrame !== undefined) {
+        cancelAnimationFrame(existingFrame)
+        closeOverlayFramesRef.current.delete(key)
+      }
+
+      if (open) {
+        nestedOverlayRef.current.add(key)
+        onNestedOverlayChange?.(true)
+        return
+      }
+
+      // Keep the outer Drawer protected while the inner Dialog restores focus.
+      nestedOverlayRef.current.add(key)
+      onNestedOverlayChange?.(true)
+      const frame = requestAnimationFrame(() => {
+        nestedOverlayRef.current.delete(key)
+        closeOverlayFramesRef.current.delete(key)
+        onNestedOverlayChange?.(nestedOverlayRef.current.size > 0)
+      })
+      closeOverlayFramesRef.current.set(key, frame)
+    },
+    [onNestedOverlayChange]
+  )
+
+  React.useEffect(() => {
+    const closeOverlayFrames = closeOverlayFramesRef.current
+    const nestedOverlays = nestedOverlayRef.current
+    return () => {
+      closeOverlayFrames.forEach((frame) => cancelAnimationFrame(frame))
+      closeOverlayFrames.clear()
+      nestedOverlays.clear()
+    }
+  }, [])
   const [errors, setErrors] = React.useState<{
     nome?: string
     codigo?: string
@@ -214,34 +300,58 @@ export function FerramentaForm({
     () => groups.filter(isItemGroupActive),
     [groups, isItemGroupActive]
   )
-  const applyGroupList = React.useCallback(
-    (next: ItemGroupResource[] | ((prev: ItemGroupResource[]) => ItemGroupResource[])) => {
-      if (!mountedRef.current) return
-      setGroups((prev) => {
-        const resolved = typeof next === "function" ? next(prev) : next
-        onGroupsUpdated?.(resolved)
-        return resolved
+  const setGroupListLocally = React.useCallback(
+    (next: ItemGroupResource[]) => {
+      groupsRef.current = next
+      setGroups(next)
+    },
+    []
+  )
+  const notifyGroupsUpdatedAfterOverlayClose = React.useCallback(
+    (next: ItemGroupResource[]) => {
+      requestAnimationFrame(() => {
+        if (mountedRef.current) onGroupsUpdated?.(next)
       })
     },
     [onGroupsUpdated]
   )
+  const setManufacturerListLocally = React.useCallback(
+    (next: ManufacturerResource[]) => {
+      manufacturersRef.current = next
+      setMans(next)
+    },
+    []
+  )
+  const notifyManufacturersUpdatedAfterOverlayClose = React.useCallback(
+    (next: ManufacturerResource[]) => {
+      requestAnimationFrame(() => {
+        if (mountedRef.current) onManufacturersUpdated?.(next)
+      })
+    },
+    [onManufacturersUpdated]
+  )
+  const selectedGroup = React.useMemo(() => {
+    if (!itemGroupId) return null
+    return (
+      groups.find((g) => {
+        const rawId = g.getApiId?.() ?? g.getAttribute?.("id")
+        return String(rawId ?? "") === itemGroupId
+      }) ?? null
+    )
+  }, [groups, itemGroupId])
   const selectedGroupLabel = React.useMemo(() => {
-    if (!itemGroupId) return ""
-    const fromList = groups.find((g) => {
-      const rawId = g.getApiId?.() ?? g.getAttribute?.("id")
-      return String(rawId ?? "") === itemGroupId
-    })
-    if (fromList) return fromList.getAttribute?.("description") ?? ""
+    if (selectedGroup) return selectedGroup.getAttribute?.("description") ?? ""
     const relation = resource?.getRelation?.("itemGroup") as ItemGroupResource | undefined
     return relation?.getAttribute?.("description") ?? ""
-  }, [groups, itemGroupId, resource])
+  }, [resource, selectedGroup])
 
   const requestEditGroup = React.useCallback((group: ItemGroupResource) => {
     const current = group?.getAttribute?.("description") ?? ""
     setEditingGroup(group)
     setEditGroupName(String(current))
+    setNestedOverlayOpen("editGroup", true)
     setEditGroupOpen(true)
-  }, [])
+  }, [setNestedOverlayOpen])
   const handleUpdateGroup = React.useCallback(async () => {
     const name = editGroupName.trim()
     if (!editingGroup) {
@@ -254,8 +364,7 @@ export function FerramentaForm({
     }
     try {
       if (mountedRef.current) setUpdatingGroup(true)
-      const dto = new ItemGroupDto().createFromColoquentResource(editingGroup)
-      dto.description = name
+      const dto = buildItemGroupDto(editingGroup, name)
 
       await ItemGroupResource.createOrUpdate(dto)
 
@@ -266,25 +375,28 @@ export function FerramentaForm({
       if (editingId != null) {
         wantSelectGroupIdRef.current = String(editingId)
       }
-      applyGroupList((prev) =>
-        prev.map((g) => {
-          const gid = g.getApiId?.() ?? g.getAttribute?.("id") ?? null
-          if (String(gid ?? "") !== String(editingId ?? "")) return g
-          g.setAttribute?.("description", name)
-          return g
-        })
-      )
+      const nextGroups = groupsRef.current.map((g) => {
+        const gid = g.getApiId?.() ?? g.getAttribute?.("id") ?? null
+        if (String(gid ?? "") !== String(editingId ?? "")) return g
+        const updated = g.clone?.() ?? g
+        updated.setAttribute?.("description", name)
+        return updated
+      })
+      setGroupListLocally(nextGroups)
       toast.success("Grupo atualizado com sucesso!")
       if (mountedRef.current) {
+        setNestedOverlayOpen("editGroup", false)
         setEditGroupOpen(false)
         setEditingGroup(null)
         setEditGroupName("")
       }
+      notifyGroupsUpdatedAfterOverlayClose(nextGroups)
 
       try {
         const fresh = await ItemGroupResource.get()
         const freshList = fresh?.getData?.() ?? []
-        applyGroupList(freshList)
+        setGroupListLocally(freshList)
+        notifyGroupsUpdatedAfterOverlayClose(freshList)
       } catch {
         toast.error("Grupo atualizado, mas não foi possível atualizar a lista.")
       }
@@ -293,7 +405,13 @@ export function FerramentaForm({
     } finally {
       if (mountedRef.current) setUpdatingGroup(false)
     }
-  }, [editGroupName, editingGroup, applyGroupList])
+  }, [
+    editGroupName,
+    editingGroup,
+    notifyGroupsUpdatedAfterOverlayClose,
+    setGroupListLocally,
+    setNestedOverlayOpen,
+  ])
 
   React.useEffect(() => {
     mountedRef.current = true
@@ -403,13 +521,14 @@ export function FerramentaForm({
       const response = await ItemResource.updateMachines(resourceId, selectedMachineIds)
       setSelectedMachineIds(extractMachineIds(response))
       toast.success("Máquinas permitidas atualizadas!")
+      setNestedOverlayOpen("machines", false)
       setMachinesDialogOpen(false)
     } catch (error: any) {
       toast.error(error?.message ?? "Não foi possível salvar as máquinas permitidas.")
     } finally {
       setMachinesSaving(false)
     }
-  }, [resourceId, selectedMachineIds])
+  }, [resourceId, selectedMachineIds, setNestedOverlayOpen])
 
   React.useEffect(() => {
     if (objectUrlRef.current) {
@@ -445,8 +564,9 @@ export function FerramentaForm({
     setAvatarFile(file)
     setAvatarPreviewUrl(nextUrl)
     setAvatarRemoved(false)
+    setNestedOverlayOpen("avatar", false)
     setAvatarDialogOpen(false)
-  }, [])
+  }, [setNestedOverlayOpen])
 
   const handleAvatarInputChange = React.useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -547,7 +667,10 @@ export function FerramentaForm({
     const manufacturerRsc = mans.find(
       (m) => m.getApiId()?.toString() === manufacturerId
     )
-    const itemGroupRsc = groups.find((g) => g.getApiId()?.toString() === itemGroupId)
+    const itemGroupRsc = groups.find((g) => {
+      const rawId = g.getApiId?.() ?? g.getAttribute?.("id")
+      return String(rawId ?? "") === itemGroupId
+    })
     const providerRsc = providers.find((p) => p.getApiId()?.toString() === providerId)
     const observationRaw = data.get("observation")?.toString() ?? ""
     const observation = observationRaw.trim() || null
@@ -639,7 +762,7 @@ export function FerramentaForm({
       dto.avatar_id = avatarIdToSave ?? null
 
       if (resource) {
-        const updatedResource = resource.clone?.() ?? resource
+        const updatedResource = (resource.clone?.() ?? resource) as ItemResource
         updatedResource.setAttribute?.("name", nome)
         updatedResource.setAttribute?.("code", codigo)
         updatedResource.setAttribute?.("active", active)
@@ -679,20 +802,31 @@ export function FerramentaForm({
         dto.itemResource = updatedResource
       }
 
-      await onSubmit(dto)
-
       if (!resource) {
+        await onSubmit(dto)
         form.reset()
         setActive(true)
         setProviderId("")
+        setItemGroupId("")
+        setManufacturerId("")
+        setErrors({})
         resetAvatarState()
-        if (typeof window !== "undefined") {
-          window.location.reload()
+        onRequestClose?.()
+        try {
+          await onSaved?.(dto)
+        } catch {
+          // The save already succeeded; a list refresh must not change the result.
         }
         return
       }
 
+      await onSubmit(dto)
       onRequestClose?.()
+      try {
+        await onSaved?.(dto)
+      } catch {
+        // The save already succeeded; a list refresh must not change the result.
+      }
     } finally {
       setSubmitting(false)
     }
@@ -701,16 +835,30 @@ export function FerramentaForm({
   return (
     <DrawerContent
       onPointerDownOutside={(e) => {
+        if (hasNestedOverlayOpen()) {
+          e.preventDefault()
+          return
+        }
         e.preventDefault()
         onRequestClose?.()
       }}
+      onFocusOutside={(e) => {
+        e.preventDefault()
+      }}
+      onInteractOutside={(e) => {
+        if (hasNestedOverlayOpen()) e.preventDefault()
+      }}
       onEscapeKeyDown={(e) => {
         e.preventDefault()
+        if (hasNestedOverlayOpen()) return
         onRequestClose?.()
       }}
     >
       <DrawerHeader>
         <DrawerTitle>{title}</DrawerTitle>
+        <DrawerDescription className="sr-only">
+          Preencha os dados da ferramenta e salve para continuar.
+        </DrawerDescription>
       </DrawerHeader>
 
       <div className="flex flex-col gap-4 overflow-y-auto px-4 text-sm">
@@ -731,7 +879,10 @@ export function FerramentaForm({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => setAvatarDialogOpen(true)}
+                onClick={() => {
+                  setNestedOverlayOpen("avatar", true)
+                  setAvatarDialogOpen(true)
+                }}
                 disabled={submitting}
               >
                 {hasAvatar ? "Substituir foto" : "Adicionar foto"}
@@ -751,12 +902,13 @@ export function FerramentaForm({
 
           {/* Nome */}
           <div className="flex flex-col gap-1">
-            <Label htmlFor="nome">Nome</Label>
+            <Label htmlFor="nome">Nome <RequiredMark /></Label>
             <Input
               id="nome"
               name="nome"
               defaultValue={resource?.getAttribute("name")}
               className={cn(errors.nome && "border-destructive")}
+              aria-required="true"
             />
             {errors.nome && (
               <span className="text-destructive text-xs">{errors.nome}</span>
@@ -765,12 +917,13 @@ export function FerramentaForm({
 
           {/* Código */}
           <div className="flex flex-col gap-1">
-            <Label htmlFor="codigo">Código</Label>
+            <Label htmlFor="codigo">Código <RequiredMark /></Label>
             <Input
               id="codigo"
               name="codigo"
               defaultValue={resource?.getAttribute("code")}
               className={cn(errors.codigo && "border-destructive")}
+              aria-required="true"
             />
             {errors.codigo && (
               <span className="text-destructive text-xs">{errors.codigo}</span>
@@ -819,15 +972,22 @@ export function FerramentaForm({
 
           {/* Grupo */}
           <div className="flex flex-col gap-3">
-            <Label>Grupo</Label>
+            <Label htmlFor="item-group">Grupo <RequiredMark /></Label>
             <Select
-              value={itemGroupId || undefined}
+              value={itemGroupId}
               onValueChange={setItemGroupId}
               open={groupSelectOpen}
-              onOpenChange={setGroupSelectOpen}
+              onOpenChange={(open) => {
+                setNestedOverlayOpen("groupSelect", open)
+                setGroupSelectOpen(open)
+              }}
             >
               <SelectTrigger
+                id="item-group"
+                ref={groupSelectTriggerRef}
                 className={cn(errors.itemGroup && "border-destructive")}
+                aria-required="true"
+                aria-invalid={Boolean(errors.itemGroup)}
               >
                 <span
                   className={cn(
@@ -852,51 +1012,42 @@ export function FerramentaForm({
                       <SelectPrimitive.Item
                         key={safeId}
                         value={safeId}
-                        className={cn(selectItemClass, "pr-12")}
-                        onPointerDown={(event) => {
-                          const target = event.target as HTMLElement | null
-                          const isEditTrigger = !!target?.closest?.("[data-edit-trigger]")
-                          if (!isEditTrigger) return
-                          event.preventDefault()
-                          event.stopPropagation()
-                          editGroupTargetRef.current = g
-                          setGroupSelectOpen(false)
-                          requestEditGroup(g)
-                          setTimeout(() => {
-                            editGroupTargetRef.current = null
-                          }, 0)
-                        }}
-                        onSelect={(event) => {
-                          if (editGroupTargetRef.current === g) {
-                            event.preventDefault()
-                            editGroupTargetRef.current = null
-                          }
-                        }}
+                        className={selectItemClass}
                       >
                         <SelectPrimitive.ItemText asChild>
                           <span className="truncate">{label}</span>
                         </SelectPrimitive.ItemText>
-                        <span
-                          data-edit-trigger
-                          className="ml-auto inline-flex size-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                          aria-label={`Editar grupo ${label}`}
-                        >
-                          <IconPencil size={18} />
-                        </span>
                       </SelectPrimitive.Item>
                     )
                   })
                 )}
               </SelectContent>
             </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={() => setNewGroupOpen(true)}
-            >
-              + Novo Grupo
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                disabled={!selectedGroup}
+                onClick={() => {
+                  if (selectedGroup) requestEditGroup(selectedGroup)
+                }}
+              >
+                <IconPencil className="mr-1 size-4" />
+                Editar grupo
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => {
+                  setNestedOverlayOpen("newGroup", true)
+                  setNewGroupOpen(true)
+                }}
+              >
+                + Novo Grupo
+              </Button>
+            </div>
             {errors.itemGroup && (
               <span className="text-destructive text-xs">
                 {errors.itemGroup}
@@ -906,10 +1057,21 @@ export function FerramentaForm({
 
           {/* Fabricante */}
           <div className="flex flex-col gap-3">
-            <Label>Fabricante</Label>
-            <Select value={manufacturerId} onValueChange={setManufacturerId}>
+            <Label htmlFor="manufacturer">Fabricante <RequiredMark /></Label>
+            <Select
+              value={manufacturerId}
+              onValueChange={setManufacturerId}
+              open={manufacturerSelectOpen}
+              onOpenChange={(open) => {
+                setNestedOverlayOpen("manufacturerSelect", open)
+                setManufacturerSelectOpen(open)
+              }}
+            >
               <SelectTrigger
+                id="manufacturer"
                 className={cn(errors.manufacturer && "border-destructive")}
+                aria-required="true"
+                aria-invalid={Boolean(errors.manufacturer)}
               >
                 <SelectValue placeholder="Selecione um fabricante" />
               </SelectTrigger>
@@ -928,7 +1090,10 @@ export function FerramentaForm({
               variant="outline"
               size="sm"
               type="button"
-              onClick={() => setNewManufacturerOpen(true)}
+              onClick={() => {
+                setNestedOverlayOpen("newManufacturer", true)
+                setNewManufacturerOpen(true)
+              }}
             >
               + Novo Fabricante
             </Button>
@@ -989,7 +1154,10 @@ export function FerramentaForm({
             <Button
               type="button"
               variant="outline"
-              onClick={() => setMachinesDialogOpen(true)}
+              onClick={() => {
+                setNestedOverlayOpen("machines", true)
+                setMachinesDialogOpen(true)
+              }}
               disabled={!resourceId || machinesLoading || submitting}
             >
               {machinesLoading ? "Carregando máquinas..." : "Selecionar máquinas"}
@@ -1004,7 +1172,15 @@ export function FerramentaForm({
           {/* Fornecedor */}
           <div className="flex flex-col gap-3">
             <Label>Fornecedor</Label>
-            <Select value={providerId} onValueChange={setProviderId}>
+            <Select
+              value={providerId}
+              onValueChange={setProviderId}
+              open={providerSelectOpen}
+              onOpenChange={(open) => {
+                setNestedOverlayOpen("providerSelect", open)
+                setProviderSelectOpen(open)
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione um fornecedor" />
               </SelectTrigger>
@@ -1046,17 +1222,20 @@ export function FerramentaForm({
             <Button type="submit" disabled={submitting} className="dark: text-white">
               {submitting ? "Salvando..." : "Salvar"}
             </Button>
-            <DrawerClose asChild>
-              <Button variant="outline" type="button">
-                Cancelar
-              </Button>
-            </DrawerClose>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => onRequestClose?.()}
+            >
+              Cancelar
+            </Button>
           </DrawerFooter>
         </form>
       </div>
       <AlertDialog
         open={avatarDialogOpen}
         onOpenChange={(open) => {
+          setNestedOverlayOpen("avatar", open)
           setAvatarDialogOpen(open)
           if (!open) setIsDragOver(false)
         }}
@@ -1114,7 +1293,10 @@ export function FerramentaForm({
       <AlertDialog
         open={machinesDialogOpen}
         onOpenChange={(open) => {
-          if (!machinesSaving) setMachinesDialogOpen(open)
+          if (!machinesSaving) {
+            setNestedOverlayOpen("machines", open)
+            setMachinesDialogOpen(open)
+          }
         }}
       >
         <AlertDialogContent className="max-h-[calc(100vh-2rem)] sm:max-w-3xl">
@@ -1197,8 +1379,14 @@ export function FerramentaForm({
         </AlertDialogContent>
       </AlertDialog>
       {/* AlertDialog: Criar novo grupo (padrão de criação igual ao handleSubmit) */}
-      <AlertDialog open={newGroupOpen} onOpenChange={setNewGroupOpen}>
-        <AlertDialogContent>
+      <AlertDialog
+        open={newGroupOpen}
+        onOpenChange={(open) => {
+          setNestedOverlayOpen("newGroup", open)
+          setNewGroupOpen(open)
+        }}
+      >
+        <AlertDialogContent onCloseAutoFocus={focusGroupSelect}>
           <AlertDialogHeader>
             <AlertDialogTitle>Novo grupo</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1210,6 +1398,7 @@ export function FerramentaForm({
           <form
             onSubmit={async (e) => {
               e.preventDefault()
+              e.stopPropagation()
               const name = newGroupName.trim()
               if (!name) {
                 toast.error("Informe o nome do grupo.")
@@ -1218,39 +1407,44 @@ export function FerramentaForm({
               try {
                 if (mountedRef.current) setCreatingGroup(true)
 
-                const dto = new ItemGroupDto()
-                dto.description = name
+                const created = await ItemGroupResource.createOrUpdate(
+                  buildItemGroupDto(null, name)
+                )
+                const returnedId = extractApiId(created)
+                let nextGroups: ItemGroupResource[]
 
-                const created = await ItemGroupResource.createOrUpdate(dto)
-                const returnedId =
-                  created?.data?.id ??
-                  created?.id ??
-                  created?.data?.data?.id ??
-                  created?.data?.data?.attributes?.id ??
-                  null
+                try {
+                  const fresh = await ItemGroupResource.get()
+                  nextGroups = fresh?.getData?.() ?? []
+                } catch {
+                  const localGroup = new ItemGroupResource()
+                  if (returnedId != null) localGroup.setApiId(returnedId)
+                  localGroup.setAttribute("description", name)
+                  nextGroups = [...groupsRef.current, localGroup]
+                  toast.error("Grupo criado, mas a lista será atualizada depois.")
+                }
 
-                const fresh = await ItemGroupResource.get()
-                const freshList = fresh?.getData?.() ?? []
-                if (returnedId != null) {
-                  wantSelectGroupIdRef.current = String(returnedId)
-                } else {
-                  const found = freshList.find((g: ItemGroupResource) =>
-                    (g.getAttribute?.("description") ?? "")
-                      .toString()
-                      .toLowerCase() === name.toLowerCase()
-                  )
+                const found = nextGroups.find((g: ItemGroupResource) => {
+                  const groupId = g.getApiId?.() ?? g.getAttribute?.("id") ?? null
+                  return returnedId != null
+                    ? String(groupId ?? "") === String(returnedId)
+                    : (g.getAttribute?.("description") ?? "")
+                        .toString()
+                        .toLowerCase() === name.toLowerCase()
+                })
                 if (found) {
                   const fid = String(found.getApiId?.() ?? found.getAttribute?.("id") ?? "")
                   wantSelectGroupIdRef.current = fid || null
                 }
-              }
-                applyGroupList(freshList)
 
+                setGroupListLocally(nextGroups)
                 toast.success("Grupo criado com sucesso!")
                 if (mountedRef.current) {
+                  setNestedOverlayOpen("newGroup", false)
                   setNewGroupName("")
                   setNewGroupOpen(false)
                 }
+                notifyGroupsUpdatedAfterOverlayClose(nextGroups)
               } catch {
                 toast.error("Não foi possível criar o grupo.")
               } finally {
@@ -1260,7 +1454,7 @@ export function FerramentaForm({
           >
             <div className="py-2">
               <Label htmlFor="novo-grupo" className="mb-1 block">
-                Nome do grupo
+                Nome do grupo <RequiredMark />
               </Label>
               <Input
                 id="novo-grupo"
@@ -1268,6 +1462,7 @@ export function FerramentaForm({
                 onChange={(e) => setNewGroupName(e.target.value)}
                 placeholder="Ex.: Fresas, Brocas..."
                 autoFocus
+                aria-required="true"
               />
             </div>
             <AlertDialogFooter>
@@ -1278,9 +1473,9 @@ export function FerramentaForm({
               >
                 Cancelar
               </AlertDialogCancel>
-              <AlertDialogAction className="dark: text-white" type="submit" disabled={creatingGroup || !newGroupName.trim()}>
+              <Button className="dark: text-white" type="submit" disabled={creatingGroup || !newGroupName.trim()}>
                 {creatingGroup ? "Criando..." : "Confirmar"}
-              </AlertDialogAction>
+              </Button>
             </AlertDialogFooter>
           </form>
         </AlertDialogContent>
@@ -1290,6 +1485,7 @@ export function FerramentaForm({
       <AlertDialog
         open={editGroupOpen}
         onOpenChange={(open) => {
+          setNestedOverlayOpen("editGroup", open)
           setEditGroupOpen(open)
           if (!open) {
             setEditingGroup(null)
@@ -1297,7 +1493,7 @@ export function FerramentaForm({
           }
         }}
       >
-        <AlertDialogContent>
+        <AlertDialogContent onCloseAutoFocus={focusGroupSelect}>
           <AlertDialogHeader>
             <AlertDialogTitle>Editar grupo</AlertDialogTitle>
             <AlertDialogDescription>
@@ -1307,12 +1503,13 @@ export function FerramentaForm({
           <form
             onSubmit={(e) => {
               e.preventDefault()
+              e.stopPropagation()
               handleUpdateGroup()
             }}
           >
             <div className="py-2">
               <Label htmlFor="editar-grupo" className="mb-1 block">
-                Nome do grupo
+                Nome do grupo <RequiredMark />
               </Label>
               <Input
                 id="editar-grupo"
@@ -1320,6 +1517,7 @@ export function FerramentaForm({
                 onChange={(e) => setEditGroupName(e.target.value)}
                 placeholder="Ex.: Fresas, Brocas..."
                 autoFocus
+                aria-required="true"
               />
             </div>
             <AlertDialogFooter>
@@ -1346,7 +1544,13 @@ export function FerramentaForm({
       </AlertDialog>
 
       {/* AlertDialog: Criar novo fabricante */}
-      <AlertDialog open={newManufacturerOpen} onOpenChange={setNewManufacturerOpen}>
+      <AlertDialog
+        open={newManufacturerOpen}
+        onOpenChange={(open) => {
+          setNestedOverlayOpen("newManufacturer", open)
+          setNewManufacturerOpen(open)
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Novo fabricante</AlertDialogTitle>
@@ -1357,6 +1561,7 @@ export function FerramentaForm({
           <form
             onSubmit={async (e) => {
               e.preventDefault()
+              e.stopPropagation()
               const name = newManufacturerName.trim()
               if (!name) {
                 toast.error("Informe o nome do fabricante.")
@@ -1368,15 +1573,19 @@ export function FerramentaForm({
                 ;(dto as any).description = name
 
                 const created = await ManufacturerResource.createOrUpdate(dto)
-                const returnedId =
-                  created?.data?.id ??
-                  created?.id ??
-                  created?.data?.data?.id ??
-                  created?.data?.data?.attributes?.id ??
-                  null
+                const returnedId = extractApiId(created)
+                let freshList: ManufacturerResource[]
 
-                const fresh = await ManufacturerResource.get()
-                const freshList = fresh?.getData?.() ?? []
+                try {
+                  const fresh = await ManufacturerResource.get()
+                  freshList = fresh?.getData?.() ?? []
+                } catch {
+                  const localManufacturer = new ManufacturerResource()
+                  if (returnedId != null) localManufacturer.setApiId(returnedId)
+                  localManufacturer.setAttribute("description", name)
+                  freshList = [...manufacturersRef.current, localManufacturer]
+                  toast.error("Fabricante criado, mas a lista será atualizada depois.")
+                }
 
                 if (returnedId != null) {
                   wantSelectManufacturerIdRef.current = String(returnedId)
@@ -1392,10 +1601,12 @@ export function FerramentaForm({
                   }
                 }
 
-                setMans(freshList)
+                setManufacturerListLocally(freshList)
                 toast.success("Fabricante criado com sucesso!")
                 setNewManufacturerName("")
+                setNestedOverlayOpen("newManufacturer", false)
                 setNewManufacturerOpen(false)
+                notifyManufacturersUpdatedAfterOverlayClose(freshList)
               } catch {
                 toast.error("Não foi possível criar o fabricante.")
               } finally {
@@ -1405,7 +1616,7 @@ export function FerramentaForm({
           >
             <div className="py-2">
               <Label htmlFor="novo-fabricante" className="mb-1 block">
-                Nome do fabricante
+                Nome do fabricante <RequiredMark />
               </Label>
               <Input
                 id="novo-fabricante"
@@ -1413,6 +1624,7 @@ export function FerramentaForm({
                 onChange={(e) => setNewManufacturerName(e.target.value)}
                 placeholder="Ex.: Sandvik, Iscar, BFT Burzoni..."
                 autoFocus
+                aria-required="true"
               />
             </div>
             <AlertDialogFooter>
@@ -1423,13 +1635,13 @@ export function FerramentaForm({
               >
                 Cancelar
               </AlertDialogCancel>
-              <AlertDialogAction
+              <Button
                 className="dark: text-white"
                 type="submit"
                 disabled={creatingManufacturer || !newManufacturerName.trim()}
               >
                 {creatingManufacturer ? "Criando..." : "Confirmar"}
-              </AlertDialogAction>
+              </Button>
             </AlertDialogFooter>
           </form>
         </AlertDialogContent>

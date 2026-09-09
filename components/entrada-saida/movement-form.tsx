@@ -7,11 +7,13 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
+  DrawerDescription,
 } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
+import { RequiredMark } from "@/components/ui/required-mark"
 import {
   Select,
   SelectContent,
@@ -194,6 +196,9 @@ function truncateText(value: string, max = 70): string {
   if (normalized.length <= max) return normalized
   return `${normalized.slice(0, max - 1)}...`
 }
+
+const ORDER_NUMBER_MAX_LENGTH = 50
+const JUSTIFICATION_MAX_LENGTH = 500
 
 export function MovementForm({
   movementType,
@@ -531,11 +536,16 @@ export function MovementForm({
             <X className="size-4" />
           </Button>
         </div>
+        <DrawerDescription className="sr-only">
+          Preencha os dados da movimentação e salve para continuar.
+        </DrawerDescription>
       </DrawerHeader>
       <div className="flex flex-col gap-4 overflow-y-auto px-4 pb-4 text-sm">
         {!source ? (
           <div className="grid gap-3">
-            <p className="text-muted-foreground">Selecione a categoria</p>
+            <p className="text-muted-foreground">
+              Selecione a categoria <RequiredMark />
+            </p>
             <button
               type="button"
               className="rounded-lg border bg-background px-3 py-3 text-sm font-medium text-left transition-colors hover:bg-muted"
@@ -579,7 +589,9 @@ export function MovementForm({
             </div>
 
             <div className="flex flex-col gap-1">
-              <Label>{source === "component" ? "Ferramenta" : "Matéria-prima / consumivel"}</Label>
+              <Label htmlFor="item">
+                {source === "component" ? "Ferramenta" : "Matéria-prima / consumivel"} <RequiredMark />
+              </Label>
               <Select
                 value={itemId}
                 onValueChange={setItemId}
@@ -588,7 +600,12 @@ export function MovementForm({
                   if (!open) setItemSearch("")
                 }}
               >
-                <SelectTrigger className={cn("w-full min-w-0", errors.item && "border-destructive")}>
+                <SelectTrigger
+                  id="item"
+                  className={cn("w-full min-w-0", errors.item && "border-destructive")}
+                  aria-required="true"
+                  aria-invalid={Boolean(errors.item)}
+                >
                   <SelectDisplay
                     label={itemLabel}
                     placeholder={
@@ -711,7 +728,9 @@ export function MovementForm({
             </div>
 
             <div className="flex flex-col gap-1">
-              <Label>Máquina {movementType === "OUT" ? "*" : "(opcional)"}</Label>
+              <Label htmlFor="machine">
+                Máquina {movementType === "OUT" ? <RequiredMark /> : "(opcional)"}
+              </Label>
               <Select
                 value={machineId}
                 onValueChange={setMachineId}
@@ -719,7 +738,12 @@ export function MovementForm({
                   if (!open) setMachineSearch("")
                 }}
               >
-                <SelectTrigger className={cn("w-full min-w-0", errors.machine && "border-destructive")}>
+                <SelectTrigger
+                  id="machine"
+                  className={cn("w-full min-w-0", errors.machine && "border-destructive")}
+                  aria-required={movementType === "OUT" ? "true" : undefined}
+                  aria-invalid={Boolean(errors.machine)}
+                >
                   <SelectDisplay label={machineLabel} placeholder="Selecione uma máquina" />
                 </SelectTrigger>
                 <SelectContent>
@@ -756,13 +780,18 @@ export function MovementForm({
               )}
             >
               <div className="flex flex-col gap-1">
-                <Label>Quantidade</Label>
+                <Label htmlFor="quantity">
+                  Quantidade <RequiredMark />
+                </Label>
                 <Input
+                  id="quantity"
                   type="number"
                   value={quantity}
                   min="0"
                   step={source === "component" ? "1" : "any"}
                   inputMode={source === "component" ? "numeric" : "decimal"}
+                  aria-required="true"
+                  aria-invalid={Boolean(errors.quantity)}
                   onChange={(event) => setQuantity(normalizeQuantityInput(event.target.value, source))}
                   className={cn(errors.quantity && "border-destructive")}
                 />
@@ -801,9 +830,11 @@ export function MovementForm({
             ) : null}
 
             <div className="flex flex-col gap-1">
-              <Label>Ordem / documento</Label>
+              <Label htmlFor="orderNumber">Ordem / documento</Label>
               <Input
+                id="orderNumber"
                 value={orderNumber}
+                maxLength={ORDER_NUMBER_MAX_LENGTH}
                 onChange={(event) => setOrderNumber(event.target.value)}
                 placeholder="Ex.: OS-2026-001 ou NF-2026-010"
               />
@@ -844,9 +875,11 @@ export function MovementForm({
             </div>
 
             <div className="flex flex-col gap-1">
-              <Label>Justificativa (opcional)</Label>
+              <Label htmlFor="movementJustification">Justificativa (opcional)</Label>
               <Textarea
+                id="movementJustification"
                 value={justification}
+                maxLength={JUSTIFICATION_MAX_LENGTH}
                 onChange={(event) => setJustification(event.target.value)}
                 rows={3}
                 placeholder="Ex.: Saída para manutenção"

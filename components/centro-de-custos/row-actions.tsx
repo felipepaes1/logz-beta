@@ -19,9 +19,10 @@ interface RowActionsProps {
   row: CentroCusto
   onDelete: (id: number) => void
   onSave: (dto: MachineDto) => void
+  existingResources: MachineResource[]
 }
 
-export function RowActions({ row, onDelete, onSave }: RowActionsProps) {
+export function RowActions({ row, onDelete, onSave, existingResources }: RowActionsProps) {
   const [open, setOpen] = React.useState(false)
 
   return (
@@ -51,6 +52,7 @@ export function RowActions({ row, onDelete, onSave }: RowActionsProps) {
         <CentroCustoForm
           title="Editar Centro de Custo"
           resource={row.resource}
+          existingResources={existingResources}
           onRequestClose={() => setOpen(false)}
           onSubmit={async (dto) => {
             await MachineResource.inviteOrUpdate(dto.clone().bindToSave())

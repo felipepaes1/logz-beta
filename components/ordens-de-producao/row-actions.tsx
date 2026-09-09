@@ -20,9 +20,15 @@ interface RowActionsProps {
   row: OrdemProducao
   onRequestDelete: (row: OrdemProducao) => void
   onSave: (dto: ProductionOrderDto) => void
+  existingResources: ProductionOrderResource[]
 }
 
-export function RowActions({ row, onRequestDelete, onSave }: RowActionsProps) {
+export function RowActions({
+  row,
+  onRequestDelete,
+  onSave,
+  existingResources,
+}: RowActionsProps) {
   const [open, setOpen] = React.useState(false)
   const [menuOpen, setMenuOpen] = React.useState(false)
 
@@ -64,6 +70,7 @@ export function RowActions({ row, onRequestDelete, onSave }: RowActionsProps) {
           <OrdemProducaoForm
             title="Editar Ordem de Produção"
             resource={row.resource}
+            existingResources={existingResources}
             onRequestClose={() => setOpen(false)}
             onSubmit={async (dto) => {
               await ProductionOrderResource.inviteOrUpdate(dto.clone().bindToSave())
