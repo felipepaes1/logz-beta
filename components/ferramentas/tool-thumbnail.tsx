@@ -1,17 +1,180 @@
 "use client"
 
+/* Native img is intentional: it preserves browser lazy loading and supports
+ * the authenticated blob fallback for protected attachment endpoints. */
+/* eslint-disable @next/next/no-img-element */
+
 import * as React from "react"
-import Image from "next/image"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { IconPhotoOff, IconX } from "@tabler/icons-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { buildAttachmentMediaUrl } from "@/resources/Attachment/attachment.resourse"
 import type { ItemResource } from "@/resources/Item/item.resource"
 
 type ToolThumbnailProps = {
   name: string
   resource?: ItemResource
+}
+
+type ImageStatus = "empty" | "loading" | "loaded" | "retrying" | "error"
+
+type ImageState = {
+  resolvedSrc: string
+  status: ImageStatus
+}
+
+type CachedMedia = {
+  promise: Promise<Blob | null>
+  lastUsedAt: number
+}
+
+const MAX_AUTHENTICATED_MEDIA_CACHE_ENTRIES = 50
+const authenticatedMediaCache = new Map<string, CachedMedia>()
+
+const getBrowserAuthToken = () => {
+  if (typeof window === "undefined") return ""
+
+  const directToken = window.localStorage.getItem("@token")
+  if (directToken && directToken !== "undefined") return directToken
+
+  const userResponse = window.localStorage.getItem("@user_response")
+  if (userResponse) {
+    try {
+      const parsed = JSON.parse(userResponse)
+      const token = parsed?.axiosResponse?.data?.data?.attributes?.token
+      if (token) return String(token)
+    } catch {
+      // The cookie fallback below is enough when the local response is stale.
+    }
+  }
+
+  const cookie = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith("token="))
+
+  return cookie ? decodeURIComponent(cookie.slice("token=".length)) : ""
+}
+
+const fetchAuthenticatedMedia = async (url: string): Promise<Blob | null> => {
+  const token = getBrowserAuthToken()
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+
+      if (response.ok) {
+        const contentType = response.headers.get("content-type")?.toLowerCase() ?? ""
+        if (!contentType || contentType.startsWith("image/")) {
+          return await response.blob()
+        }
+      }
+    } catch {
+      // A second attempt handles short-lived connection failures.
+    }
+
+    if (attempt === 0) {
+      await new Promise((resolve) => window.setTimeout(resolve, 150))
+    }
+  }
+
+  return null
+}
+
+const getAuthenticatedMedia = (url: string) => {
+  const cached = authenticatedMediaCache.get(url)
+  if (cached) {
+    cached.lastUsedAt = Date.now()
+    return cached.promise
+  }
+
+  const promise = fetchAuthenticatedMedia(url).then((blob) => {
+    if (!blob && authenticatedMediaCache.get(url)?.promise === promise) {
+      authenticatedMediaCache.delete(url)
+    }
+    return blob
+  })
+
+  authenticatedMediaCache.set(url, { promise, lastUsedAt: Date.now() })
+
+  if (authenticatedMediaCache.size > MAX_AUTHENTICATED_MEDIA_CACHE_ENTRIES) {
+    const oldestEntry = [...authenticatedMediaCache.entries()].sort(
+      ([, left], [, right]) => left.lastUsedAt - right.lastUsedAt
+    )[0]
+    if (oldestEntry) authenticatedMediaCache.delete(oldestEntry[0])
+  }
+
+  return promise
+}
+
+function useResilientImage(src: string, reloadKey = 0) {
+  const objectUrlRef = React.useRef<string | null>(null)
+  const requestIdRef = React.useRef(0)
+  const fallbackAttemptedRef = React.useRef(false)
+  const [state, setState] = React.useState<ImageState>(() => ({
+    resolvedSrc: src,
+    status: src ? "loading" : "empty",
+  }))
+
+  React.useEffect(() => {
+    const requestId = ++requestIdRef.current
+    fallbackAttemptedRef.current = false
+
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current)
+      objectUrlRef.current = null
+    }
+
+    setState({
+      resolvedSrc: src,
+      status: src ? "loading" : "empty",
+    })
+
+    return () => {
+      if (requestIdRef.current === requestId) requestIdRef.current += 1
+      if (objectUrlRef.current) {
+        URL.revokeObjectURL(objectUrlRef.current)
+        objectUrlRef.current = null
+      }
+    }
+  }, [src, reloadKey])
+
+  const handleLoad = React.useCallback(() => {
+    setState((current) => ({ ...current, status: "loaded" }))
+  }, [])
+
+  const handleError = React.useCallback(() => {
+    if (!src) return
+
+    if (fallbackAttemptedRef.current) {
+      setState((current) => ({ ...current, status: "error" }))
+      return
+    }
+
+    fallbackAttemptedRef.current = true
+
+    const requestId = requestIdRef.current
+    setState((current) => ({ ...current, status: "retrying" }))
+
+    void getAuthenticatedMedia(src).then((blob) => {
+      if (requestIdRef.current !== requestId) return
+
+      if (!blob) {
+        setState((current) => ({ ...current, status: "error" }))
+        return
+      }
+
+      const objectUrl = URL.createObjectURL(blob)
+      objectUrlRef.current = objectUrl
+      setState({ resolvedSrc: objectUrl, status: "loading" })
+    })
+  }, [src])
+
+  return { ...state, handleLoad, handleError }
 }
 
 const getAvatarRelation = (resource?: ItemResource) =>
@@ -41,10 +204,11 @@ const getPhotoUrls = (resource?: ItemResource) => {
   }
 }
 
-export function ToolThumbnail({ name, resource }: ToolThumbnailProps) {
+function ToolThumbnailComponent({ name, resource }: ToolThumbnailProps) {
   const { thumbnailUrl, previewUrl } = getPhotoUrls(resource)
-  const [previewLoaded, setPreviewLoaded] = React.useState(false)
-  const [previewFailed, setPreviewFailed] = React.useState(false)
+  const [previewReloadKey, setPreviewReloadKey] = React.useState(0)
+  const thumbnailImage = useResilientImage(thumbnailUrl)
+  const previewImage = useResilientImage(previewUrl, previewReloadKey)
   const label = thumbnailUrl
     ? `Foto da ferramenta ${name}`
     : `Sem foto cadastrada para ${name}`
@@ -55,18 +219,24 @@ export function ToolThumbnail({ name, resource }: ToolThumbnailProps) {
       title={label}
       className="size-10 rounded-lg border bg-muted/40 shadow-xs"
     >
-      {thumbnailUrl ? (
-        <AvatarImage
-          src={thumbnailUrl}
+      {thumbnailUrl && thumbnailImage.status !== "error" ? (
+        <img
+          src={thumbnailImage.resolvedSrc}
           alt={label}
           loading="lazy"
           decoding="async"
-          className="object-cover transition-transform duration-200 group-hover:scale-105"
+          onLoad={thumbnailImage.handleLoad}
+          onError={thumbnailImage.handleError}
+          className={`absolute inset-0 size-full object-cover transition-opacity transition-transform duration-200 group-hover:scale-105 ${
+            thumbnailImage.status === "loaded" ? "opacity-100" : "opacity-0"
+          }`}
         />
       ) : null}
-      <AvatarFallback className="rounded-lg text-muted-foreground">
-        <IconPhotoOff aria-hidden size={17} stroke={1.6} />
-      </AvatarFallback>
+      {thumbnailImage.status !== "loaded" ? (
+        <AvatarFallback className="rounded-lg text-muted-foreground">
+          <IconPhotoOff aria-hidden size={17} stroke={1.6} />
+        </AvatarFallback>
+      ) : null}
     </Avatar>
   )
 
@@ -75,10 +245,7 @@ export function ToolThumbnail({ name, resource }: ToolThumbnailProps) {
   return (
     <DialogPrimitive.Root
       onOpenChange={(open) => {
-        if (open) {
-          setPreviewLoaded(false)
-          setPreviewFailed(false)
-        }
+        if (open) setPreviewReloadKey((current) => current + 1)
       }}
     >
       <DialogPrimitive.Trigger asChild>
@@ -113,29 +280,28 @@ export function ToolThumbnail({ name, resource }: ToolThumbnailProps) {
           </DialogPrimitive.Close>
 
           <div className="relative flex h-[70svh] max-h-[44rem] min-h-64 items-center justify-center bg-muted/30 p-4 sm:p-6">
-            {!previewLoaded && !previewFailed ? (
+            {previewImage.status !== "loaded" && previewImage.status !== "error" ? (
               <div
                 aria-hidden
                 className="absolute inset-4 animate-pulse rounded-lg bg-muted sm:inset-6"
               />
             ) : null}
 
-            {previewFailed ? (
+            {previewImage.status === "error" ? (
               <div className="flex flex-col items-center gap-3 text-muted-foreground">
                 <IconPhotoOff aria-hidden size={34} stroke={1.5} />
                 <span className="text-sm">Não foi possível carregar a foto.</span>
               </div>
             ) : (
-              <Image
-                src={previewUrl}
+              <img
+                src={previewImage.resolvedSrc}
                 alt={`Foto ampliada da ferramenta ${name}`}
-                fill
-                unoptimized
-                sizes="(max-width: 1024px) 90vw, 1024px"
-                onLoad={() => setPreviewLoaded(true)}
-                onError={() => setPreviewFailed(true)}
-                className={`object-contain p-4 transition-opacity duration-200 sm:p-6 ${
-                  previewLoaded ? "opacity-100" : "opacity-0"
+                loading="eager"
+                decoding="async"
+                onLoad={previewImage.handleLoad}
+                onError={previewImage.handleError}
+                className={`absolute inset-0 h-full w-full object-contain p-4 transition-opacity duration-200 sm:p-6 ${
+                  previewImage.status === "loaded" ? "opacity-100" : "opacity-0"
                 }`}
               />
             )}
@@ -145,3 +311,5 @@ export function ToolThumbnail({ name, resource }: ToolThumbnailProps) {
     </DialogPrimitive.Root>
   )
 }
+
+export const ToolThumbnail = React.memo(ToolThumbnailComponent)

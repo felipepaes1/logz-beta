@@ -316,9 +316,15 @@ export default function Page() {
     const loadItems = async () => {
       try {
         const response = await ItemResource.with(["manufacturer", "itemGroup", "provider", "pcp", "avatar"]).get()
-        if (mounted) setItems((response as PluralResponse<ItemResource>).getData())
+        if (mounted) {
+          setItems((response as PluralResponse<ItemResource>).getData())
+          setIsLoading(false)
+        }
       } catch {
-        if (mounted) toast.error("Não foi possível carregar itens.")
+        if (mounted) {
+          toast.error("Não foi possível carregar itens.")
+          setIsLoading(false)
+        }
       }
     }
 
@@ -328,7 +334,6 @@ export default function Page() {
     })
     ItemGroupResource.get().then((response: PluralResponse<ItemGroupResource>) => {
       if (mounted) setItemGroups(response.getData())
-      if (mounted) setIsLoading(false)
     })
     ProviderResource.get()
       .then((response: PluralResponse<ProviderResource>) => {
@@ -726,8 +731,19 @@ export default function Page() {
           Number(item.getApiId?.()) === itemId ? dto.itemResource! : item
         )
       )
+
+      // The upload endpoint may return only the attachment id. In that case
+      // the list cannot build the media URL until the relation is read back,
+      // so refresh only this exceptional path.
+      const avatar = dto.itemResource.getRelation?.("avatar")
+      const avatarToken =
+        avatar?.getToken?.() ??
+        avatar?.getAttribute?.("token") ??
+        avatar?.attributes?.token ??
+        avatar?.token
+      if (dto.avatar_id && !avatarToken) void reloadItems()
     }
-  }, [])
+  }, [reloadItems])
 
   const columns = React.useMemo<ColumnDef<Ferramenta>[]>(
     () => {
